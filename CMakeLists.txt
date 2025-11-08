@@ -26,7 +26,7 @@ file(GLOB_RECURSE SRC_FILES
 # Основная библиотека
 add_library(stellar_core STATIC ${SRC_FILES})
 
-# Основная программа (пока заглушка)
+# Основная программа
 add_executable(stellar_tracker_main src/main.cpp)
 target_link_libraries(stellar_tracker_main stellar_core)
 
@@ -48,14 +48,17 @@ add_executable(test_gauss tests/test_gauss.cpp)
 target_link_libraries(test_gauss stellar_core)
 add_test(NAME test_gauss COMMAND test_gauss)
 
-# Группируем тесты
-set(TEST_EXECUTABLES test_basic test_math_utils test_gauss)
+# Тест 4: Реальные данные
+add_executable(test_real_data tests/test_real_data.cpp)
+target_link_libraries(test_real_data stellar_core)
+add_test(NAME test_real_data COMMAND test_real_data)
 
-# Выведем список файлов для отладки
-message(STATUS "Found source files:")
-foreach(file ${SRC_FILES})
-    message(STATUS "  ${file}")
-endforeach()
+# Бенчмарк
+add_executable(benchmark tests/benchmark.cpp)
+target_link_libraries(benchmark stellar_core)
+
+# Обновляем список тестов
+set(TEST_EXECUTABLES test_basic test_math_utils test_gauss test_real_data)
 
 # Цели для удобства
 add_custom_target(run_tests
@@ -65,6 +68,6 @@ add_custom_target(run_tests
 )
 
 add_custom_target(build_all
-    DEPENDS stellar_tracker_main ${TEST_EXECUTABLES}
+    DEPENDS stellar_tracker_main ${TEST_EXECUTABLES} benchmark
     COMMENT "Building all targets..."
 )

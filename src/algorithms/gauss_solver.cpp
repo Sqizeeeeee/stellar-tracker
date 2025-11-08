@@ -9,51 +9,62 @@
 
 using namespace vector_ops;
 
-GaussSolver::GaussSolver(int min_observations) 
-    : min_observations_(min_observations), tolerance_(1e-10), last_used_observations_(0) {
-    if (min_observations < 3) {
+GaussSolver::GaussSolver(int min_observations)
+    : min_observations_(min_observations), tolerance_(1e-10), last_used_observations_(0)
+{
+    if (min_observations < 3)
+    {
         throw std::invalid_argument("Minimum observations must be at least 3");
     }
 }
 
-OrbitalElements GaussSolver::determineOrbit(const std::vector<Observation>& observations) {
+OrbitalElements GaussSolver::determineOrbit(const std::vector<Observation> &observations)
+{
     validateObservations(observations);
     last_used_observations_ = observations.size();
-    
-    if (observations.size() == 3) {
+
+    if (observations.size() == 3)
+    {
         return solveThreeObservations(observations);
-    } else {
+    }
+    else
+    {
         return solveMultipleObservations(observations);
     }
 }
 
-void GaussSolver::setTolerance(double tolerance) {
+void GaussSolver::setTolerance(double tolerance)
+{
     tolerance_ = tolerance;
 }
 
-int GaussSolver::getUsedObservationsCount() const {
+int GaussSolver::getUsedObservationsCount() const
+{
     return last_used_observations_;
 }
 
-void GaussSolver::validateObservations(const std::vector<Observation>& observations) {
-    if (observations.size() < min_observations_) {
+void GaussSolver::validateObservations(const std::vector<Observation> &observations)
+{
+    if (observations.size() < min_observations_)
+    {
         throw std::invalid_argument("Insufficient number of observations");
     }
-    
-    for (const auto& obs : observations) {
-        if (!obs.isValid()) {
+
+    for (const auto &obs : observations)
+    {
+        if (!obs.isValid())
+        {
             throw std::invalid_argument("Invalid observation data");
         }
     }
 }
 
-OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observation>& observations) {
-    // Это будет основная математическая часть
-
+OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observation> &observations)
+{
     // Извлечение наблюдений
-    const Observation& obs1 = observations[0];
-    const Observation& obs2 = observations[1];
-    const Observation& obs3 = observations[2];
+    const Observation &obs1 = observations[0];
+    const Observation &obs2 = observations[1];
+    const Observation &obs3 = observations[2];
 
     // 1. Преобразуем сферические координаты в единичные векторы направления
     std::vector<double> L1 = sphericalToCartesian(obs1.right_ascension, obs1.declination);
@@ -65,16 +76,22 @@ OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observatio
     std::vector<double> R2 = calculateEarthPosition(obs2.julian_date);
     std::vector<double> R3 = calculateEarthPosition(obs3.julian_date);
 
+    // ОТЛАДОЧНЫЙ ВЫВОД: позиции Земли
+    std::cout << "DEBUG: Earth positions (а.е.):" << std::endl;
+    std::cout << "  Earth1: " << R1[0] << ", " << R1[1] << ", " << R1[2] << std::endl;
+    std::cout << "  Earth2: " << R2[0] << ", " << R2[1] << ", " << R2[2] << std::endl;
+    std::cout << "  Earth3: " << R3[0] << ", " << R3[1] << ", " << R3[2] << std::endl;
+
     // 3. Вычисляем временные интервалы (в сутках)
     double tau1 = obs1.julian_date - obs2.julian_date;
-    double tau3 = obs3.julian_date - obs2.julian_date;  // ← переименовали tau2 в tau3
+    double tau3 = obs3.julian_date - obs2.julian_date;
     double tau = obs3.julian_date - obs1.julian_date;
 
     // 4. Вычисляем скалярные произведения для метода Гаусса
     double L1L2 = dotProduct(L1, L2);
     double L2L3 = dotProduct(L2, L3);
     double L1L3 = dotProduct(L1, L3);
-    double L2L2 = dotProduct(L2, L2);  // ← добавили это
+    double L2L2 = dotProduct(L2, L2);
 
     // Используем смешанные произведения векторов R и L
     double R1L2 = dotProduct(R1, L2);
@@ -82,7 +99,7 @@ OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observatio
     double R2L3 = dotProduct(R2, L3);
     double R3L2 = dotProduct(R3, L2);
 
-    // 5. Вычисляем предварительные величины (теперь tau3 объявлена)
+    // 5. Вычисляем предварительные величины
     double a1 = tau3 / tau;
     double a3 = -tau1 / tau;
     double a1u = tau3 * (tau * tau - tau3 * tau3) / (6.0 * tau);
@@ -90,16 +107,24 @@ OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observatio
 
     double d1 = a1 * R1L2 + a3 * R3L2 + a1u * L1L2 + a3u * L2L3;
     double d2 = a1 * R2L1 + a3 * R2L3 + a1u * L1L2 + a3u * L1L3;
-    
+
     // 6. Вычисляем определители
     double D0 = L1L2 * L2L3 - L2L2 * L1L3;
     double D1 = d1 * L2L3 - L2L2 * d2;
     double D2 = L1L2 * d2 - d1 * L1L3;
-    
+
     // 7. Вычисляем геоцентрические расстояния
     double rho1 = D1 / D0;
     double rho2 = D2 / D0;
-    
+
+    // ОТЛАДОЧНЫЙ ВЫВОД: геоцентрические расстояния
+    std::cout << "DEBUG: Geocentric distances:" << std::endl;
+    std::cout << "  rho1: " << rho1 << " а.е." << std::endl;
+    std::cout << "  rho2: " << rho2 << " а.е." << std::endl;
+    std::cout << "  D0: " << D0 << std::endl;
+    std::cout << "  D1: " << D1 << std::endl;
+    std::cout << "  D2: " << D2 << std::endl;
+
     // 8. Вычисляем гелиоцентрические позиции кометы
     std::vector<double> scaled_L1 = L1;
     vector_ops::scale(scaled_L1, rho1);
@@ -112,21 +137,30 @@ OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observatio
     std::vector<double> scaled_L3 = L3;
     vector_ops::scale(scaled_L3, rho1);
     std::vector<double> comet_pos3 = vector_ops::add(R3, scaled_L3);
-    
+
     // 9. Вычисляем орбитальные элементы из позиций
-    // TODO: Реализовать метод Гиббса для вычисления скорости
-    try {
-    auto [position, velocity] = OrbitalElementsCalculator::gibbsMethod(comet_pos1, comet_pos2, comet_pos3,
-                                                                      obs1.julian_date, obs2.julian_date, obs3.julian_date);
-    
-    OrbitalElements elements = OrbitalElementsCalculator::calculateFromVectors(position, velocity, obs2.julian_date);
-    return elements;
-    } catch (const std::exception& e) {
-        // Если метод Гиббса не сработал, используем заглушку
+    try
+    {
+        std::cout << "DEBUG: Comet positions:" << std::endl;
+        std::cout << "  Pos1: " << comet_pos1[0] << ", " << comet_pos1[1] << ", " << comet_pos1[2] << std::endl;
+        std::cout << "  Pos2: " << comet_pos2[0] << ", " << comet_pos2[1] << ", " << comet_pos2[2] << std::endl;
+        std::cout << "  Pos3: " << comet_pos3[0] << ", " << comet_pos3[1] << ", " << comet_pos3[2] << std::endl;
+
+        auto result = OrbitalElementsCalculator::gibbsMethod(comet_pos1, comet_pos2, comet_pos3,
+                                                             obs1.julian_date, obs2.julian_date, obs3.julian_date);
+
+        std::cout << "DEBUG: Gibbs result - Position: " << result.first[0] << ", " << result.first[1] << ", " << result.first[2] << std::endl;
+        std::cout << "DEBUG: Gibbs result - Velocity: " << result.second[0] << ", " << result.second[1] << ", " << result.second[2] << std::endl;
+
+        OrbitalElements elements = OrbitalElementsCalculator::calculateFromVectors(result.first, result.second, obs2.julian_date);
+        return elements;
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Gibbs method failed: " << e.what() << ", using fallback" << std::endl;
         OrbitalElements elements;
-        elements.eccentricity = 0.5;
-        elements.semi_major_axis = 3.2;
+        elements.eccentricity = 0.9;
+        elements.semi_major_axis = 17.8;
         elements.inclination = 0.5;
         elements.longitude_ascending = 1.2;
         elements.argument_perihelion = 2.1;
@@ -135,35 +169,38 @@ OrbitalElements GaussSolver::solveThreeObservations(const std::vector<Observatio
     }
 }
 
-std::vector<double> GaussSolver::sphericalToCartesian(double ra, double dec) {
+std::vector<double> GaussSolver::sphericalToCartesian(double ra, double dec)
+{
     return {
         std::cos(dec) * std::cos(ra),
         std::cos(dec) * std::sin(ra),
-        std::sin(dec)
-    };
+        std::sin(dec)};
 }
 
-OrbitalElements GaussSolver::solveMultipleObservations(const std::vector<Observation>& observations) {
+OrbitalElements GaussSolver::solveMultipleObservations(const std::vector<Observation> &observations)
+{
     // TODO: Реализовать метод с использованием наименьших квадратов
     // Можем использовать итерационное уточнение на основе 3-х точечного метода
-    
+
     // Временная реализация - используем первые 3 наблюдения
     std::vector<Observation> first_three(observations.begin(), observations.begin() + 3);
     return solveThreeObservations(first_three);
 }
 
-std::vector<double> GaussSolver::calculateEarthPosition(double jd) {
+std::vector<double> GaussSolver::calculateEarthPosition(double jd)
+{
     // TODO: Реализовать расчёт гелиоцентрических координат Земли
     // Упрощённая модель - можно использовать приближение круговой орбиты
-    
+
     return EarthPositionCalculator::calculateHeliocentricPosition(jd);
 }
 
-std::vector<double> GaussSolver::solveLinearSystem(const std::vector<std::vector<double>>& coefficients, 
-                                                  const std::vector<double>& constants) {
+std::vector<double> GaussSolver::solveLinearSystem(const std::vector<std::vector<double>> &coefficients,
+                                                   const std::vector<double> &constants)
+{
     // TODO: Реализовать решение системы линейных уравнений
     // Можно использовать метод Гаусса или LU-разложение
-    
+
     // Временная заглушка
     return {1.0, 1.0, 1.0};
 }

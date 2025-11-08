@@ -88,26 +88,46 @@ std::pair<std::vector<double>, std::vector<double>>
 OrbitalElementsCalculator::gibbsMethod(const std::vector<double>& r1, const std::vector<double>& r2, const std::vector<double>& r3,
                                       double t1, double t2, double t3) {
     
-    // 1. Проверяем, что векторы копланарны (лежат в одной плоскости)
-    std::vector<double> cross_12_23 = crossProduct(subtract(r2, r1), subtract(r3, r2));
-    if (norm(cross_12_23) < 1e-10) {
+    // Проверяем размеры векторов
+    if (r1.size() != 3 || r2.size() != 3 || r3.size() != 3) {
+        throw std::invalid_argument("Gibbs method requires 3D vectors");
+    }
+    
+    // Вычисляем разности векторов
+    std::vector<double> r21 = subtract(r2, r1);
+    std::vector<double> r32 = subtract(r3, r2);
+    std::vector<double> r13 = subtract(r1, r3);
+    
+    // Проверяем копланарность (векторы должны быть неколлинеарны)
+    std::vector<double> cross_test = crossProduct(r21, r32);
+    if (norm(cross_test) < 1e-12) {
         throw std::invalid_argument("Vectors are coplanar - cannot use Gibbs method");
     }
     
-    // 2. Вычисляем величины Z12, Z32, Z
-    std::vector<double> Z12 = crossProduct(r1, r2);
-    std::vector<double> Z32 = crossProduct(r3, r2);
-    std::vector<double> Z = add(Z12, Z32);
-    
-    // 3. Вычисляем вектор D
-    std::vector<double> D = add(crossProduct(r1, r2), add(crossProduct(r2, r3), crossProduct(r3, r1)));
-    
-    // 4. Вычисляем вектор S
+    // Вычисляем величины для метода Гиббса
     double r1_mag = norm(r1);
-    double r2_mag = norm(r2); 
+    double r2_mag = norm(r2);
     double r3_mag = norm(r3);
     
-    // Создаем копии для масштабирования
+    // Вычисляем векторные произведения
+    std::vector<double> c12 = crossProduct(r1, r2);
+    std::vector<double> c23 = crossProduct(r2, r3);
+    std::vector<double> c31 = crossProduct(r3, r1);
+    
+    // Вычисляем скалярные тройные произведения
+    double d1 = dotProduct(r1, c23);
+    double d2 = dotProduct(r2, c31);
+    double d3 = dotProduct(r3, c12);
+    
+    // Вычисляем коэффициенты
+    double N = r1_mag * d1 + r2_mag * d2 + r3_mag * d3;
+    double D = d1 + d2 + d3;
+    
+    if (std::abs(D) < 1e-12) {
+        throw std::invalid_argument("Division by zero in Gibbs method");
+    }
+    
+    // Вычисляем вектор S (создаём копии для масштабирования)
     std::vector<double> term1 = r1;
     scale(term1, r2_mag - r3_mag);
     
@@ -119,16 +139,21 @@ OrbitalElementsCalculator::gibbsMethod(const std::vector<double>& r1, const std:
     
     std::vector<double> S = add(term1, add(term2, term3));
     
-    // 5. Вычисляем вектор B и скаляр L
-    std::vector<double> B = crossProduct(D, r2);
-    double L = sqrt(constants::GRAVITATIONAL_CONSTANT) / (norm(D) * norm(D));
+    // Вычисляем вектор D
+    std::vector<double> D_vec = add(c12, add(c23, c31));
+
+    // Вычисляем вектор B
+    std::vector<double> B = crossProduct(D_vec, r2);
     
-    // 6. Вычисляем вектор скорости
+    // Вычисляем константу Lg
+    double Lg = sqrt(constants::GRAVITATIONAL_CONSTANT / (N * D));
+    
+    // Вычисляем вектор скорости (создаём копии для масштабирования)
     std::vector<double> B_scaled = B;
-    scale(B_scaled, L / r2_mag);
+    scale(B_scaled, Lg / r2_mag);
     
     std::vector<double> S_scaled = S;
-    scale(S_scaled, L);
+    scale(S_scaled, Lg);
     
     std::vector<double> velocity = add(B_scaled, S_scaled);
     
