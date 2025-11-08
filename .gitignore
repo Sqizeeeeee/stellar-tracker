@@ -1,0 +1,72 @@
+# Build directories
+build/
+out/
+bin/
+lib/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compilation outputs
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+docs/_build/
+
+# Python (для будущей веб-части)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage reports
+*.gcda
+*.gcno
+*.gcov
+
+# Profiling
+*.prof
+*.gprof
+
+# Dependencies
+deps/
+third_party/
