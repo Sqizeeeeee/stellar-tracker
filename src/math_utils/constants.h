@@ -43,6 +43,13 @@ namespace constants {
      * @brief Угловая скорость Земли в радианах/сутки
      */
     constexpr double EARTH_ANGULAR_VELOCITY = 6.300388098;
+
+    /**
+     * @brief Гравитационный параметр Солнца (GM) в а.е.³/сутки²
+     * 
+     * Используется для расчётов орбит вокруг Солнца
+     */
+    constexpr double GM_SUN = 0.00029591220828559104;
 }
 
 #endif // CONSTANTS_H

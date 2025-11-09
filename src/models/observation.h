@@ -4,10 +4,10 @@
 #include <string>
 
 /**
- * @brief Структура для представления астрономического наблюдения кометы
+ * @brief Структура для представления астрономического наблюдения
  * 
- * Содержит данные одного наблюдения: дату/время и координаты 
- * во второй экваториальной системе координат
+ * Содержит данные одного наблюдения: дату/время, координаты
+ * во второй экваториальной системе координат и тип небесного тела
  */
 struct Observation {
     /**
@@ -35,13 +35,52 @@ struct Observation {
     double declination;
 
     /**
+     * @brief Тип небесного тела
+     * 
+     * Определяет стратегию оценки начального приближения орбиты.
+     * Допустимые значения: "comet", "asteroid", "planet"
+     */
+    std::string object_type;
+
+    /**
      * @brief Проверка валидности данных наблюдения
      * @return true если данные в допустимых диапазонах, иначе false
      */
     bool isValid() const {
-        return julian_date > 0 && 
-               right_ascension >= 0 && right_ascension < 2 * M_PI &&
-               declination >= -M_PI/2 && declination <= M_PI/2;
+        bool valid_coordinates = julian_date > 0 && 
+                               right_ascension >= 0 && right_ascension < 2 * M_PI &&
+                               declination >= -M_PI/2 && declination <= M_PI/2;
+        
+        bool valid_type = object_type == "comet" || 
+                         object_type == "asteroid" || 
+                         object_type == "planet" ||
+                         object_type.empty(); // Пустой тип тоже допустим
+        
+        return valid_coordinates && valid_type;
+    }
+
+    /**
+     * @brief Проверяет является ли объект кометой
+     * @return true если object_type == "comet"
+     */
+    bool isComet() const {
+        return object_type == "comet";
+    }
+
+    /**
+     * @brief Проверяет является ли объект астероидом
+     * @return true если object_type == "asteroid"
+     */
+    bool isAsteroid() const {
+        return object_type == "asteroid";
+    }
+
+    /**
+     * @brief Проверяет является ли объект планетой
+     * @return true если object_type == "planet"
+     */
+    bool isPlanet() const {
+        return object_type == "planet";
     }
 };
 

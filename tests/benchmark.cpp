@@ -1,25 +1,20 @@
 #include <iostream>
 #include <chrono>
-#include "../src/algorithms/gauss_solver.h"
-#include "../src/models/observation.h"
+#include "../src/algorithms/least_squares_determinator.h"
+#include "../src/utils/csv_loader.h"
 
-int main() {
-    std::cout << "=== Бенчмарк производительности ===" << std::endl;
+void benchmarkNASA_Method() {
+    std::cout << "=== БЕНЧМАРК NASA МЕТОДА НАИМЕНЬШИХ КВАДРАТОВ ===" << std::endl;
     
     try {
-        std::vector<Observation> observations = {
-            {2446470.5, 1.234, 0.567},
-            {2446471.5, 1.235, 0.568},
-            {2446472.5, 1.236, 0.569}
-        };
-        
-        GaussSolver solver;
+        auto observations = CsvLoader::loadObservations("../data/test_encke.csv");
+        LeastSquaresDeterminator determinator;
         
         auto start = std::chrono::high_resolution_clock::now();
         
-        const int iterations = 1000;
+        const int iterations = 10; // Меньше итераций, т.к. метод сложнее
         for (int i = 0; i < iterations; ++i) {
-            OrbitalElements elements = solver.determineOrbit(observations);
+            OrbitalElements elements = determinator.determineOrbit(observations);
         }
         
         auto end = std::chrono::high_resolution_clock::now();
@@ -30,10 +25,12 @@ int main() {
         std::cout << "Среднее время на расчёт: " 
                   << duration.count() / iterations << " мкс" << std::endl;
                   
-        return 0;
-        
     } catch (const std::exception& e) {
         std::cout << "❌ Ошибка: " << e.what() << std::endl;
-        return 1;
     }
+}
+
+int main() {
+    benchmarkNASA_Method();
+    return 0;
 }

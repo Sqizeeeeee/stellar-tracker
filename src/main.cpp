@@ -1,39 +1,31 @@
 #include <iostream>
-#include "algorithms/gauss_solver.h"
-#include "models/observation.h"
+#include "algorithms/least_squares_determinator.h"
+#include "utils/csv_loader.h"
 
-/**
- * @brief Основная программа StellarTracker
- * 
- * В будущем здесь будет интерфейс для ввода наблюдений
- * и вывода результатов расчёта орбиты
- */
 int main() {
-    std::cout << "=== StellarTracker - Определение орбит комет ===" << std::endl;
-    std::cout << "Версия: 1.0.0" << std::endl;
-    std::cout << "Статус: в разработке" << std::endl;
-    std::cout << std::endl;
+    std::cout << "StellarTracker - Определение орбит комет" << std::endl;
     
-    // Демонстрация работы алгоритма
     try {
-        std::vector<Observation> demo_observations = {
-            {2451545.0, 1.5, 0.3},
-            {2451546.0, 1.6, 0.32},
-            {2451547.0, 1.7, 0.34}
-        };
+        // Загружаем данные
+        auto observations = CsvLoader::loadObservations("data/test_encke.csv");
+        std::cout << "Загружено наблюдений: " << observations.size() << std::endl;
         
-        GaussSolver solver;
-        OrbitalElements elements = solver.determineOrbit(demo_observations);
+        // Определяем орбиту
+        LeastSquaresDeterminator determinator;
+        OrbitalElements orbit = determinator.determineOrbit(observations);
         
-        std::cout << "Демонстрационный расчёт выполнен успешно!" << std::endl;
-        std::cout << "Использовано наблюдений: " << solver.getUsedObservationsCount() << std::endl;
+        if (orbit.isValid()) {
+            std::cout << "\nОрбита определена успешно!" << std::endl;
+            std::cout << "Эксцентриситет: " << orbit.eccentricity << std::endl;
+            std::cout << "Большая полуось: " << orbit.semi_major_axis << " а.е." << std::endl;
+        } else {
+            std::cout << "\nНе удалось определить орбиту" << std::endl;
+        }
         
     } catch (const std::exception& e) {
-        std::cout << "Ошибка при демонстрационном расчёте: " << e.what() << std::endl;
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+        return 1;
     }
-    
-    std::cout << std::endl;
-    std::cout << "Для использования запустите тесты: make run_tests" << std::endl;
     
     return 0;
 }
