@@ -1,0 +1,15 @@
+services:
+  orchestrator:
+    build: .
+    container_name: orchestrator
+    ports:
+      - "50051:50051"
+    environment:
+      - ORBIT_SERVICE_ADDR=localhost:50052      # пока заглушки
+      - COLLISION_SERVICE_ADDR=localhost:50053  # пока заглушки
+    networks:
+      - astro-net
+
+networks:
+  astro-net:
+    driver: bridge

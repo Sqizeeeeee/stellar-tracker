@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package astro;
+
+// ====================== Входные данные ======================
+message Observation {
+  string obs_time   = 1;  // ISO 8601
+  double ra_deg     = 2;
+  double dec_deg    = 3;
+  double rms_ra     = 4;  // угл. секунды, опционально
+  double rms_dec    = 5;
+  string station    = 6;  // MPC код
+  string catalog    = 7;  // "Gaia2" и т.п.
+}
+
+message ObservationsRequest {
+  repeated Observation observations = 1;
+  string request_id    = 2;  // UUID от клиента (для сквозного трейсинга)
+  string object_name   = 3;
+}
+
+// ====================== Орбита ======================
+message OrbitElements {
+  double a_au                 = 1;  // большая полуось
+  double e                    = 2;  // эксцентриситет
+  double i_deg                = 3;  // наклон
+  double omega_deg            = 4;  // аргумент перигелия
+  double big_mega_deg         = 5;  // долгота восходящего узла
+  double M_deg                = 6;  // средняя аномалия на эпоху
+  string epoch                = 7;  // ISO
+}
+
+// ====================== Риски ======================
+message CollisionRisk {
+  double perihelion_au     = 1;
+  double moid_earth_au     = 2;
+  bool potential_impact    = 3;
+  string risk_level        = 4;  // "low" | "moderate" | "high"
+}
+
+// ====================== Ответы ======================
+message OrbitResponse {
+  OrbitElements orbit      = 1;
+  string request_id        = 2;
+  bool success             = 3;
+  string error             = 4;
+}
+
+message RiskResponse {
+  CollisionRisk risk       = 1;
+  string request_id        = 2;
+  bool success             = 3;
+  string error             = 4;
+}
+
+// ====================== Сервисы ======================
+service OrbitService {
+  rpc Calculate(ObservationsRequest) returns (OrbitResponse);
+}
+
+service CollisionService {
+  rpc AssessRisk(OrbitElements) returns (RiskResponse);
+}
+
+service OrchestratorService {
+  // Один публичный метод — всё остальное внутри
+  rpc Process(ObservationsRequest) returns (RiskResponse);
+}
