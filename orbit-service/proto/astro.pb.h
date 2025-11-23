@@ -237,7 +237,7 @@ class OrbitElements final : public ::google::protobuf::Message
     kEFieldNumber = 2,
     kIDegFieldNumber = 3,
     kOmegaDegFieldNumber = 4,
-    kOmegaDegFieldNumber_5 = 5,
+    kBigMegaDegFieldNumber = 5,
     kMDegFieldNumber = 6,
   };
   // string epoch = 7;
@@ -295,14 +295,14 @@ class OrbitElements final : public ::google::protobuf::Message
   void _internal_set_omega_deg(double value);
 
   public:
-  // double Omega_deg = 5;
-  void clear_omega_deg() ;
-  double omega_deg() const;
-  void set_omega_deg(double value);
+  // double big_mega_deg = 5;
+  void clear_big_mega_deg() ;
+  double big_mega_deg() const;
+  void set_big_mega_deg(double value);
 
   private:
-  double _internal_omega_deg() const;
-  void _internal_set_omega_deg(double value);
+  double _internal_big_mega_deg() const;
+  void _internal_set_big_mega_deg(double value);
 
   public:
   // double M_deg = 6;
@@ -346,7 +346,7 @@ class OrbitElements final : public ::google::protobuf::Message
     double e_;
     double i_deg_;
     double omega_deg_;
-    double omega_deg_;
+    double big_mega_deg_;
     double m_deg_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -2182,29 +2182,29 @@ inline void OrbitElements::_internal_set_omega_deg(double value) {
   _impl_.omega_deg_ = value;
 }
 
-// double Omega_deg = 5;
-inline void OrbitElements::clear_omega_deg() {
+// double big_mega_deg = 5;
+inline void OrbitElements::clear_big_mega_deg() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.omega_deg_ = 0;
+  _impl_.big_mega_deg_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
                   0x00000020U);
 }
-inline double OrbitElements::omega_deg() const {
-  // @@protoc_insertion_point(field_get:astro.OrbitElements.Omega_deg)
-  return _internal_omega_deg();
+inline double OrbitElements::big_mega_deg() const {
+  // @@protoc_insertion_point(field_get:astro.OrbitElements.big_mega_deg)
+  return _internal_big_mega_deg();
 }
-inline void OrbitElements::set_omega_deg(double value) {
-  _internal_set_omega_deg(value);
+inline void OrbitElements::set_big_mega_deg(double value) {
+  _internal_set_big_mega_deg(value);
   SetHasBit(_impl_._has_bits_[0], 0x00000020U);
-  // @@protoc_insertion_point(field_set:astro.OrbitElements.Omega_deg)
+  // @@protoc_insertion_point(field_set:astro.OrbitElements.big_mega_deg)
 }
-inline double OrbitElements::_internal_omega_deg() const {
+inline double OrbitElements::_internal_big_mega_deg() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.omega_deg_;
+  return _impl_.big_mega_deg_;
 }
-inline void OrbitElements::_internal_set_omega_deg(double value) {
+inline void OrbitElements::_internal_set_big_mega_deg(double value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.omega_deg_ = value;
+  _impl_.big_mega_deg_ = value;
 }
 
 // double M_deg = 6;

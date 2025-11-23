@@ -36,7 +36,7 @@ inline constexpr OrbitElements::Impl_::Impl_(
         e_{0},
         i_deg_{0},
         omega_deg_{0},
-        omega_deg_{0},
+        big_mega_deg_{0},
         m_deg_{0} {}
 
 template <typename>
@@ -261,7 +261,7 @@ const ::uint32_t
         PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.e_),
         PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.i_deg_),
         PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.omega_deg_),
-        PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.omega_deg_),
+        PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.big_mega_deg_),
         PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.m_deg_),
         PROTOBUF_FIELD_OFFSET(::astro::OrbitElements, _impl_.epoch_),
         1,
@@ -331,30 +331,30 @@ const char descriptor_table_protodef_astro_2eproto[] ABSL_ATTRIBUTE_SECTION_VARI
     "\022\017\n\007station\030\006 \001(\t\022\017\n\007catalog\030\007 \001(\t\"h\n\023Ob"
     "servationsRequest\022(\n\014observations\030\001 \003(\0132"
     "\022.astro.Observation\022\022\n\nrequest_id\030\002 \001(\t\022"
-    "\023\n\013object_name\030\003 \001(\t\"{\n\rOrbitElements\022\014\n"
+    "\023\n\013object_name\030\003 \001(\t\"~\n\rOrbitElements\022\014\n"
     "\004a_au\030\001 \001(\001\022\t\n\001e\030\002 \001(\001\022\r\n\005i_deg\030\003 \001(\001\022\021\n"
-    "\tomega_deg\030\004 \001(\001\022\021\n\tOmega_deg\030\005 \001(\001\022\r\n\005M"
-    "_deg\030\006 \001(\001\022\r\n\005epoch\030\007 \001(\t\"k\n\rCollisionRi"
-    "sk\022\025\n\rperihelion_au\030\001 \001(\001\022\025\n\rmoid_earth_"
-    "au\030\002 \001(\001\022\030\n\020potential_impact\030\003 \001(\010\022\022\n\nri"
-    "sk_level\030\004 \001(\t\"h\n\rOrbitResponse\022#\n\005orbit"
-    "\030\001 \001(\0132\024.astro.OrbitElements\022\022\n\nrequest_"
-    "id\030\002 \001(\t\022\017\n\007success\030\003 \001(\010\022\r\n\005error\030\004 \001(\t"
-    "\"f\n\014RiskResponse\022\"\n\004risk\030\001 \001(\0132\024.astro.C"
-    "ollisionRisk\022\022\n\nrequest_id\030\002 \001(\t\022\017\n\007succ"
-    "ess\030\003 \001(\010\022\r\n\005error\030\004 \001(\t2M\n\014OrbitService"
-    "\022=\n\tCalculate\022\032.astro.ObservationsReques"
-    "t\032\024.astro.OrbitResponse2K\n\020CollisionServ"
-    "ice\0227\n\nAssessRisk\022\024.astro.OrbitElements\032"
-    "\023.astro.RiskResponse2Q\n\023OrchestratorServ"
-    "ice\022:\n\007Process\022\032.astro.ObservationsReque"
-    "st\032\023.astro.RiskResponseb\006proto3"
+    "\tomega_deg\030\004 \001(\001\022\024\n\014big_mega_deg\030\005 \001(\001\022\r"
+    "\n\005M_deg\030\006 \001(\001\022\r\n\005epoch\030\007 \001(\t\"k\n\rCollisio"
+    "nRisk\022\025\n\rperihelion_au\030\001 \001(\001\022\025\n\rmoid_ear"
+    "th_au\030\002 \001(\001\022\030\n\020potential_impact\030\003 \001(\010\022\022\n"
+    "\nrisk_level\030\004 \001(\t\"h\n\rOrbitResponse\022#\n\005or"
+    "bit\030\001 \001(\0132\024.astro.OrbitElements\022\022\n\nreque"
+    "st_id\030\002 \001(\t\022\017\n\007success\030\003 \001(\010\022\r\n\005error\030\004 "
+    "\001(\t\"f\n\014RiskResponse\022\"\n\004risk\030\001 \001(\0132\024.astr"
+    "o.CollisionRisk\022\022\n\nrequest_id\030\002 \001(\t\022\017\n\007s"
+    "uccess\030\003 \001(\010\022\r\n\005error\030\004 \001(\t2M\n\014OrbitServ"
+    "ice\022=\n\tCalculate\022\032.astro.ObservationsReq"
+    "uest\032\024.astro.OrbitResponse2K\n\020CollisionS"
+    "ervice\0227\n\nAssessRisk\022\024.astro.OrbitElemen"
+    "ts\032\023.astro.RiskResponse2Q\n\023OrchestratorS"
+    "ervice\022:\n\007Process\022\032.astro.ObservationsRe"
+    "quest\032\023.astro.RiskResponseb\006proto3"
 };
 static ::absl::once_flag descriptor_table_astro_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_astro_2eproto = {
     false,
     false,
-    951,
+    954,
     descriptor_table_protodef_astro_2eproto,
     "astro.proto",
     &descriptor_table_astro_2eproto_once,
@@ -1389,10 +1389,10 @@ OrbitElements::_table_ = {
     {::_pbi::TcParser::FastF64S1,
      {33, 4, 0,
       PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.omega_deg_)}},
-    // double Omega_deg = 5;
+    // double big_mega_deg = 5;
     {::_pbi::TcParser::FastF64S1,
      {41, 5, 0,
-      PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.omega_deg_)}},
+      PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.big_mega_deg_)}},
     // double M_deg = 6;
     {::_pbi::TcParser::FastF64S1,
      {49, 6, 0,
@@ -1412,8 +1412,8 @@ OrbitElements::_table_ = {
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.i_deg_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double omega_deg = 4;
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.omega_deg_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-    // double Omega_deg = 5;
-    {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.omega_deg_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double big_mega_deg = 5;
+    {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.big_mega_deg_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double M_deg = 6;
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.m_deg_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // string epoch = 7;
@@ -1501,12 +1501,12 @@ PROTOBUF_NOINLINE void OrbitElements::Clear() {
     }
   }
 
-  // double Omega_deg = 5;
+  // double big_mega_deg = 5;
   if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-    if (::absl::bit_cast<::uint64_t>(this_._internal_omega_deg()) != 0) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_big_mega_deg()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
-          5, this_._internal_omega_deg(), target);
+          5, this_._internal_big_mega_deg(), target);
     }
   }
 
@@ -1586,9 +1586,9 @@ PROTOBUF_NOINLINE void OrbitElements::Clear() {
         total_size += 9;
       }
     }
-    // double Omega_deg = 5;
+    // double big_mega_deg = 5;
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (::absl::bit_cast<::uint64_t>(this_._internal_omega_deg()) != 0) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_big_mega_deg()) != 0) {
         total_size += 9;
       }
     }
@@ -1648,8 +1648,8 @@ void OrbitElements::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (::absl::bit_cast<::uint64_t>(from._internal_omega_deg()) != 0) {
-        _this->_impl_.omega_deg_ = from._impl_.omega_deg_;
+      if (::absl::bit_cast<::uint64_t>(from._internal_big_mega_deg()) != 0) {
+        _this->_impl_.big_mega_deg_ = from._impl_.big_mega_deg_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {

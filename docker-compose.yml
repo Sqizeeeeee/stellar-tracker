@@ -8,10 +8,13 @@ services:
       - "50051:50051"
     environment:
       - COLLISION_SERVICE_ADDR=collision-service:50053
+      - ORBIT_SERVICE_ADDR=orbit-service:50052
     networks:
       - astro-net
     depends_on:
       - collision-service
+      - orbit-service
+    command: ["orchestrator"]
 
   collision-service:
     build:
@@ -22,6 +25,16 @@ services:
     networks:
       - astro-net
 
+  orbit-service:
+    build:
+      context: .
+      dockerfile: orbit-service/Dockerfile
+    container_name: orbit-service
+    ports:
+      - "50052:50052"
+    networks:
+      - astro-net
+    command: ["orbit_service"]
 networks:
   astro-net:
     driver: bridge

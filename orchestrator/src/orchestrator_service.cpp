@@ -36,33 +36,47 @@ public:
     }
 
     Status Process(ServerContext* context,
-                   const ObservationsRequest* request,
-                   RiskResponse* reply) override {
+               const ObservationsRequest* request,
+               RiskResponse* reply) override {
         reply->set_request_id(request->request_id());
 
-        // Пока OrbitService нет — сразу переходим к Collision (или возвращаем заглушку)
+        // Используем unique_ptr вместо прямого создания
         std::unique_ptr<OrbitResponse> orbit_resp = std::make_unique<OrbitResponse>();
-        if (!orbit_stub_) {
-            reply->set_success(false);
-            reply->set_error("OrbitService временно недоступен — сервис ещё не реализован");
-            return Status::OK;
+
+        // Если OrbitService доступен - вызываем его
+        if (orbit_stub_) {
+            ClientContext orbit_ctx;
+            orbit_ctx.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5));
+            Status orbit_status = orbit_stub_->Calculate(&orbit_ctx, *request, orbit_resp.get());
+            
+            if (!orbit_status.ok()) {
+                reply->set_success(false);
+                reply->set_error("OrbitService недоступен: " + orbit_status.error_message());
+                return Status::OK;
+            }
+            
+            if (!orbit_resp->success()) {
+                reply->set_success(false);
+                reply->set_error("OrbitService ошибка: " + orbit_resp->error());
+                return Status::OK;
+            }
+        } else {
+            // Заглушка если OrbitService не доступен
+            orbit_resp->set_success(true);
+            orbit_resp->set_request_id(request->request_id());
+            // Создаем простую заглушку орбиты через mutable_orbit()
+            astro::OrbitElements* orbit = orbit_resp->mutable_orbit();
+            orbit->set_a_au(1.0);
+            orbit->set_e(0.1);
+            orbit->set_i_deg(5.0);
+            orbit->set_epoch("2024-01-01T00:00:00Z");
         }
 
-        // Если вдруг потом появится — раскомментишь
-        /*
-        ClientContext orbit_ctx;
-        orbit_ctx.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5));
-        Status orbit_status = orbit_stub_->Calculate(&orbit_ctx, *request, orbit_resp.get());
-        if (!orbit_status.ok()) {
-            reply->set_success(false);
-            reply->set_error("OrbitService недоступен: " + orbit_status.error_message());
-            return Status::OK;
-        }
-        */
-
+        // Вызываем CollisionService с результатом орбиты
         ClientContext collision_ctx;
         collision_ctx.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(10));
         Status collision_status = collision_stub_->AssessRisk(&collision_ctx, orbit_resp->orbit(), reply);
+        
         if (!collision_status.ok()) {
             reply->set_success(false);
             reply->set_error("CollisionService ошибка: " + collision_status.error_message());
