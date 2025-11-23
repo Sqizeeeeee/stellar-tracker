@@ -1,104 +1,75 @@
 #include <grpcpp/grpcpp.h>
-#include <grpcpp/alarm.h>
-#include <thread>
-#include <chrono>
-#include <memory>
 #include <iostream>
-
+#include <memory>
+#include <optional>
+#include <chrono>
 #include "astro.grpc.pb.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::Status;
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
 using astro::ObservationsRequest;
 using astro::OrbitResponse;
-using astro::OrbitElements;
 using astro::RiskResponse;
+using astro::OrchestratorService;
 using astro::OrbitService;
 using astro::CollisionService;
-using astro::OrchestratorService;
 
-// ===============================================
-// Вспомогательная функция: вызов с retry (минимум 5 попыток)
-// ===============================================
-template<typename Stub, typename Request, typename Response>
-bool CallWithRetry(
-    std::unique_ptr<Stub>& stub,
-    grpc::Status (Stub::*method)(grpc::ClientContext*, const Request&, Response*),
-    const Request& request,
-    Response* response,
-    int max_attempts = 5,
-    int base_delay_ms = 100)
-{
-    for (int attempt = 1; attempt <= max_attempts; ++attempt) {
-        grpc::ClientContext context;
-        // Таймаут 10 сек на каждую попытку
-        context.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(10));
-
-        grpc::Status status = (stub.get()->*method)(&context, request, response);
-
-        if (status.ok()) {
-            return true;
-        }
-
-        std::cerr << "Попытка " << attempt << " неудачна: " 
-                  << status.error_code() << " - " << status.error_message() << std::endl;
-
-        if (attempt < max_attempts) {
-            int delay_ms = base_delay_ms * (1 << (attempt - 1)); // экспоненциальный backoff
-            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-        }
-    }
-    return false;
-}
-
-// ===============================================
-// Реализация OrchestratorService
-// ===============================================
 class OrchestratorServiceImpl final : public OrchestratorService::Service {
 public:
-    explicit OrchestratorServiceImpl(
-        const std::string& orbit_addr,
-        const std::string& collision_addr)
-    {
-        orbit_stub_ = OrbitService::NewStub(
-            grpc::CreateChannel(orbit_addr, grpc::InsecureChannelCredentials()));
-        collision_stub_ = CollisionService::NewStub(
-            grpc::CreateChannel(collision_addr, grpc::InsecureChannelCredentials()));
+    explicit OrchestratorServiceImpl(const std::string& collision_addr,
+                                     const std::optional<std::string>& orbit_addr_opt = std::nullopt)
+        : collision_stub_(CollisionService::NewStub(
+              grpc::CreateChannel(collision_addr, grpc::InsecureChannelCredentials()))) {
+
+        if (orbit_addr_opt.has_value()) {
+            orbit_stub_ = OrbitService::NewStub(
+                grpc::CreateChannel(orbit_addr_opt.value(), grpc::InsecureChannelCredentials()));
+            std::cout << "  → OrbitService подключён: " << orbit_addr_opt.value() << "\n";
+        } else {
+            std::cout << "  → OrbitService отключён (заглушка)\n";
+        }
+        std::cout << "  → CollisionService: " << collision_addr << "\n";
     }
 
     Status Process(ServerContext* context,
                    const ObservationsRequest* request,
-                   RiskResponse* reply) override
-    {
-        // 1. Получаем орбиту (с 5 попытками)
-        OrbitResponse orbit_resp;
-        if (!CallWithRetry(orbit_stub_, &OrbitService::Stub::Calculate, *request, &orbit_resp)) {
+                   RiskResponse* reply) override {
+        reply->set_request_id(request->request_id());
+
+        // Пока OrbitService нет — сразу переходим к Collision (или возвращаем заглушку)
+        std::unique_ptr<OrbitResponse> orbit_resp = std::make_unique<OrbitResponse>();
+        if (!orbit_stub_) {
             reply->set_success(false);
-            reply->set_error("Не удалось связаться с OrbitService после 5 попыток");
-            reply->set_request_id(request->request_id());
+            reply->set_error("OrbitService временно недоступен — сервис ещё не реализован");
             return Status::OK;
         }
 
-        if (!orbit_resp.success()) {
+        // Если вдруг потом появится — раскомментишь
+        /*
+        ClientContext orbit_ctx;
+        orbit_ctx.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(5));
+        Status orbit_status = orbit_stub_->Calculate(&orbit_ctx, *request, orbit_resp.get());
+        if (!orbit_status.ok()) {
             reply->set_success(false);
-            reply->set_error("OrbitService вернул ошибку: " + orbit_resp.error());
-            reply->set_request_id(request->request_id());
+            reply->set_error("OrbitService недоступен: " + orbit_status.error_message());
+            return Status::OK;
+        }
+        */
+
+        ClientContext collision_ctx;
+        collision_ctx.set_deadline(std::chrono::system_clock::now() + std::chrono::seconds(10));
+        Status collision_status = collision_stub_->AssessRisk(&collision_ctx, orbit_resp->orbit(), reply);
+        if (!collision_status.ok()) {
+            reply->set_success(false);
+            reply->set_error("CollisionService ошибка: " + collision_status.error_message());
             return Status::OK;
         }
 
-        // 2. Оцениваем риски (с 5 попытками)
-        RiskResponse risk_resp;
-        if (!CallWithRetry(collision_stub_, &CollisionService::Stub::AssessRisk,
-                           orbit_resp.orbit(), &risk_resp)) {
-            reply->set_success(false);
-            reply->set_error("Не удалось связаться с CollisionService после 5 попыток");
-            reply->set_request_id(request->request_id());
-            return Status::OK;
-        }
-
-        // Всё успешно — копируем результат
-        *reply = risk_resp;
+        reply->set_success(true);
         return Status::OK;
     }
 

@@ -1,12 +1,24 @@
 services:
   orchestrator:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: orchestrator
     ports:
       - "50051:50051"
     environment:
-      - ORBIT_SERVICE_ADDR=localhost:50052      # пока заглушки
-      - COLLISION_SERVICE_ADDR=localhost:50053  # пока заглушки
+      - COLLISION_SERVICE_ADDR=collision-service:50053
+    networks:
+      - astro-net
+    depends_on:
+      - collision-service
+
+  collision-service:
+    build:
+      context: .
+      dockerfile: collision-service/Dockerfile
+    ports:
+      - "50053:50053"
     networks:
       - astro-net
 
