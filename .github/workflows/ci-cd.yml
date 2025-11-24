@@ -1,10 +1,10 @@
-name: Docker CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
@@ -17,78 +17,108 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build orchestrator
+      with:
+        submodules: recursive  # Важно для find_orb зависимостей
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    
+    - name: Install Python dependencies
       run: |
-        docker build -f orchestrator/Dockerfile -t orchestrator:${{ github.sha }} .
-
-    - name: Build orbit-service
+        pip install grpcio grpcio-tools
+        pip install -r requirements.txt || true
+        pip install pytest docker || true
+    
+    - name: Test collision-service Python code
       run: |
-        docker build -f orbit-service/Dockerfile -t orbit-service:${{ github.sha }} .
-
-    - name: Build collision-service
+        python -m py_compile collision-service/server.py
+        echo "✓ collision-service Python syntax OK"
+    
+    - name: Build Docker images
       run: |
-        docker build -f collision-service/Dockerfile -t collision-service:${{ github.sha }} .
-
-    - name: Test services startup
+        # Собираем каждый сервис отдельно через его Dockerfile
+        docker build -t orchestrator-app .
+        docker build -t orbit-service-app -f orbit-service/Dockerfile .
+        docker build -t collision-service-app -f collision-service/Dockerfile .
+    
+    - name: Verify Docker images and binaries
       run: |
+        echo "=== Built images ==="
+        docker images
+        
+        echo "=== Checking binaries ==="
+        docker run --rm orchestrator-app which orchestrator && echo "✓ orchestrator binary exists"
+        docker run --rm orbit-service-app which orbit_service && echo "✓ orbit_service binary exists"
+        docker run --rm orbit-service-app which find_orb && echo "✓ find_orb binary exists"
+        docker run --rm collision-service-app python --version && echo "✓ Python runtime OK"
+    
+    - name: Test with docker-compose
+      run: |
+        # Запускаем полный стек через docker-compose
         docker-compose up -d
-        sleep 30
-        # Проверяем что контейнеры запущены
-        docker ps -a
-        # Проверяем логи на ошибки
-        docker-compose logs
+        sleep 20
+        
+        echo "=== Container status ==="
+        docker-compose ps
+        
+        echo "=== Health checks ==="
+        # Проверяем что сервисы запустились
+        timeout 30 bash -c 'until docker-compose logs orchestrator | grep -i "started\|running\|listening"; do sleep 2; done' && echo "✓ orchestrator started"
+        timeout 30 bash -c 'until docker-compose logs orbit-service | grep -i "started\|running\|listening"; do sleep 2; done' && echo "✓ orbit-service started"
+        timeout 30 bash -c 'until docker-compose logs collision-service | grep -i "started\|running\|listening"; do sleep 2; done' && echo "✓ collision-service started"
+        
+        echo "=== Process checks ==="
+        docker-compose exec -T orchestrator ps aux | grep -q orchestrator && echo "✓ orchestrator process running"
+        docker-compose exec -T orbit-service ps aux | grep -q orbit_service && echo "✓ orbit_service process running"
+        docker-compose exec -T collision-service ps aux | grep -q python && echo "✓ collision-service Python running"
+        
+        echo "=== Network connectivity ==="
+        # Проверяем что порты открыты
+        docker-compose exec -T orchestrator nc -z orbit-service 50052 && echo "✓ orchestrator → orbit-service"
+        docker-compose exec -T orchestrator nc -z collision-service 50053 && echo "✓ orchestrator → collision-service"
+        
         docker-compose down
 
-  push-images:
-    needs: build-and-test
+  deploy:
     runs-on: ubuntu-latest
+    needs: build-and-test
     if: github.ref == 'refs/heads/main'
     
-    permissions:
-      contents: read
-      packages: write
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
+      with:
+        submodules: recursive
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v2
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build and push orchestrator
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: orchestrator/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/orchestrator:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/orchestrator:${{ github.sha }}
-
-    - name: Build and push orbit-service
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: orbit-service/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/orbit-service:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/orbit-service:${{ github.sha }}
-
-    - name: Build and push collision-service
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: collision-service/Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/collision-service:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/collision-service:${{ github.sha }}
+    
+    - name: Build and push optimized images
+      run: |
+        # Собираем финальные версии образов
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator:latest .
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator:latest
+        
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orbit:latest -f orbit-service/Dockerfile .
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orbit:latest
+        
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-collision:latest -f collision-service/Dockerfile .
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-collision:latest
+    
+    - name: Update deployment info
+      run: |
+        echo "🚀 Microservices deployed!"
+        echo ""
+        echo "Available images:"
+        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orchestrator:latest (C++ gRPC)"
+        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-orbit:latest (C++ with find_orb)"
+        echo "- ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-collision:latest (Python gRPC)"
+        echo ""
+        echo "To update production:"
+        echo "docker-compose pull && docker-compose up -d"
