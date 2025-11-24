@@ -27,7 +27,7 @@ jobs:
     - name: Static analysis
       run: |
         cppcheck --enable=warning,performance --suppress=missingIncludeSystem \
-          -I orchestrator/ -I orbit-service/ -I proto/ . 2> cppcheck.txt || true
+          -I orchestrator/ -I orbit-service/ -I proto/ . 2> cppcheck.txt
         echo "CPPCheck results:"
         cat cppcheck.txt | head -20
 
@@ -64,9 +64,13 @@ jobs:
     
     - name: Lint Dockerfiles
       run: |
-        docker run --rm -i hadolint/hadolint < Dockerfile || echo "Dockerfile lint issues"
-        docker run --rm -i hadolint/hadolint < orbit-service/Dockerfile || echo "orbit-service Dockerfile lint issues"
-        docker run --rm -i hadolint/hadolint < collision-service/Dockerfile || echo "collision-service Dockerfile lint issues"
+        # Устанавливаем hadolint
+        curl -L https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64 -o hadolint
+        chmod +x hadolint
+        
+        ./hadolint Dockerfile || echo "Dockerfile lint issues"
+        ./hadolint orbit-service/Dockerfile || echo "orbit-service Dockerfile lint issues"
+        ./hadolint collision-service/Dockerfile || echo "collision-service Dockerfile lint issues"
 
   validate-build:
     runs-on: ubuntu-latest
@@ -74,8 +78,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        submodules: true
+    
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake git \
+          libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
+          libgrpc-dev libgrpc++-dev curl wget
     
     - name: Validate proto files
       run: |
@@ -83,11 +92,15 @@ jobs:
         rm -rf test_build
         echo "✓ Proto files valid"
     
-    - name: Check find_orb dependencies
+    - name: Check external dependencies
       run: |
-        # Проверяем что ссылки на find_orb репозитории работают
+        # Проверяем доступность репозиториев find_orb
         for repo in lunar jpl_eph find_orb sat_code; do
-          curl -s -I https://github.com/Bill-Gray/$repo.git | head -1 | grep -q "200\|301" && echo "✓ $repo available"
+          if curl -s --head https://github.com/Bill-Gray/$repo.git | grep -q "200\|301"; then
+            echo "✓ $repo available"
+          else
+            echo "⚠ $repo check failed"
+          fi
         done
 
   security-scan:
@@ -97,11 +110,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Scan for secrets
+    - name: Scan for secrets with gitleaks
       uses: gitleaks/gitleaks-action@v2
-      with:
-        config-path: .gitleaks.toml
     
-    - name: Basic vulnerability scan
+    - name: Basic security check
       run: |
-        echo "Security checks passed - add Trivy/Aquasec later"
+        echo "Running basic security checks..."
+        # Проверяем что нет явных секретов в коде
+        if grep -r "password\|secret\|key" --include="*.py" --include="*.cpp" --include="*.h" collision-service/ orchestrator/ orbit-service/ | grep -v "test\|example"; then
+          echo "⚠ Possible secrets found in code"
+          exit 1
+        else
+          echo "✓ No obvious secrets found"
+        fi
