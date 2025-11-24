@@ -1,6 +1,20 @@
 #include <grpcpp/grpcpp.h>
 #include <iostream>
 #include "astro.grpc.pb.h"
+#include "orbit_calculator.h"
+
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::Status;
+using astro::OrbitService;
+using astro::ObservationsRequest;
+using astro::OrbitResponse;
+
+#include <grpcpp/grpcpp.h>
+#include <iostream>
+#include "astro.grpc.pb.h"
+#include "orbit_calculator.h"  // Добавляем include
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -18,10 +32,8 @@ class OrbitServiceImpl final : public OrbitService::Service {
         std::cout << "OrbitService получил запрос для объекта: " 
                   << request->object_name() << std::endl;
         
-        // Заглушка - пока возвращаем ошибку
-        response->set_request_id(request->request_id());
-        response->set_success(false);
-        response->set_error("OrbitService еще не реализован");
+        OrbitCalculator calculator;
+        *response = calculator.CalculateOrbit(*request);
         
         return Status::OK;
     }

@@ -45,6 +45,16 @@ RUN cd find_orb && \
 RUN find / -name "find_orb" -type f 2>/dev/null && \
     cp find_orb/find_orb /usr/local/bin/
 
+# Исправляем проблему с find_orb
+RUN cd find_orb && \
+    make clean && \
+    make LIBS="-L/usr/local/lib -llunar -ljpl -lsatell -lm" && \
+    cp find_orb /usr/local/bin/
+
+# Создаем базовый конфиг для find_orb
+RUN mkdir -p /root/.find_orb && \
+    echo -e "! Find_Orb configuration file\nephemeris_file = /root/.find_orb/linux_p1550p2650.430t\nobs_long = 0.0\nobs_lat = 51.4778\nobs_alt = 0.0" > /root/.find_orb/find_orb.cfg
+
 WORKDIR /src
 COPY . .
 

@@ -2,6 +2,7 @@ project(orbit_service LANGUAGES CXX)
 
 add_executable(orbit_service
     src/main.cpp
+    src/orbit_calculator.cpp
     proto/astro.pb.cc
     proto/astro.grpc.pb.cc
 )
