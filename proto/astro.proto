@@ -26,7 +26,7 @@ message OrbitElements {
   double i_deg                = 3;  // наклон
   double omega_deg            = 4;  // аргумент перигелия
   double big_mega_deg         = 5;  // долгота восходящего узла
-  double M_deg                = 6;  // средняя аномалия на эпоху
+  double m_deg                = 6;  // средняя аномалия на эпоху
   string epoch                = 7;  // ISO
 }
 

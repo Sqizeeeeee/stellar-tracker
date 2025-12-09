@@ -30,11 +30,13 @@ services:
       context: .
       dockerfile: orbit-service/Dockerfile
     container_name: orbit-service
+    environment:
+      - PYTHONPATH=/app/proto
     ports:
       - "50052:50052"
     networks:
       - astro-net
-    command: ["orbit_service"]
+    command: ["python", "orbit_service.py"]
 networks:
   astro-net:
     driver: bridge
