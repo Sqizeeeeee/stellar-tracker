@@ -22,6 +22,7 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/}
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
         echo "version_number=${VERSION#v}" >> $GITHUB_OUTPUT
+        echo "repo_lowercase=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -40,20 +41,8 @@ jobs:
         file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}-orchestrator:${{ steps.version.outputs.version }}
-          ghcr.io/${{ github.repository }}-orchestrator:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Build and push orbit service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./orbit-service/Dockerfile
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}-orbit:${{ steps.version.outputs.version }}
-          ghcr.io/${{ github.repository }}-orbit:latest
+          ghcr.io/${{ steps.version.outputs.repo_lowercase }}-orchestrator:${{ steps.version.outputs.version }}
+          ghcr.io/${{ steps.version.outputs.repo_lowercase }}-orchestrator:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
@@ -64,8 +53,8 @@ jobs:
         file: ./collision-service/Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}-collision:${{ steps.version.outputs.version }}
-          ghcr.io/${{ github.repository }}-collision:latest
+          ghcr.io/${{ steps.version.outputs.repo_lowercase }}-collision:${{ steps.version.outputs.version }}
+          ghcr.io/${{ steps.version.outputs.repo_lowercase }}-collision:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
@@ -76,9 +65,8 @@ jobs:
         echo "" >> CHANGELOG.md
         echo "### Docker Images" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
-        echo "- \`ghcr.io/${{ github.repository }}-orchestrator:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
-        echo "- \`ghcr.io/${{ github.repository }}-orbit:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
-        echo "- \`ghcr.io/${{ github.repository }}-collision:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+        echo "- \`ghcr.io/${{ steps.version.outputs.repo_lowercase }}-orchestrator:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
+        echo "- \`ghcr.io/${{ steps.version.outputs.repo_lowercase }}-collision:${{ steps.version.outputs.version }}\`" >> CHANGELOG.md
         echo "" >> CHANGELOG.md
         echo "### Changes" >> CHANGELOG.md
         git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md || echo "- Initial release" >> CHANGELOG.md
