@@ -1,30 +1,58 @@
-# Базовый образ с Python 3.11
-FROM python:3.11-slim
+FROM python:3.11-slim-bullseye
 
-# Устанавливаем зависимости
-RUN pip install --no-cache-dir grpcio grpcio-tools protobuf numpy scipy astropy jax jaxlib
-
-# Создаём рабочую папку
 WORKDIR /app
 
-# Копируем proto файлы в контейнер
-COPY proto/ ./proto/
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jre-headless \
+    wget \
+    unzip \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Генерируем Python gRPC файлы прямо в папку proto/
+# Скачиваем и распаковываем данные Orekit
+RUN wget -O /tmp/orekit-data.zip \
+    https://gitlab.orekit.org/orekit/orekit-data/-/archive/main/orekit-data-main.zip && \
+    unzip /tmp/orekit-data.zip -d /tmp/ && \
+    mv /tmp/orekit-data-main /app/orekit-data && \
+    rm /tmp/orekit-data.zip
+
+# Устанавливаем переменные окружения для Java
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV OREKIT_DATA=/app/orekit-data
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Устанавливаем Python пакеты
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    orekit-jpype \
+    numpy \
+    scipy \
+    astropy \
+    pandas \
+    grpcio \
+    grpcio-tools \
+    protobuf
+
+# Копируем proto файлы и генерируем Python код
+COPY proto/ /app/proto/
 RUN python -m grpc_tools.protoc \
-    -I./proto \
-    --python_out=./proto \
-    --grpc_python_out=./proto \
-    ./proto/astro.proto
+    -I/app/proto \
+    --python_out=/app/proto \
+    --grpc_python_out=/app/proto \
+    /app/proto/astro.proto
 
-# Копируем основной сервис
-COPY orbit-service/orbit_service.py .
+# Исправляем импорты в сгенерированных файлах
+RUN sed -i 's/import astro_pb2/from . import astro_pb2/g' /app/proto/astro_pb2_grpc.py
 
-# Убедимся, что папка proto — пакет Python
-RUN touch proto/__init__.py
+# Копируем сервис
+COPY orbit-service/orbit_service.py /app/
 
-# Открываем порт gRPC
+# Устанавливаем переменные окружения
+ENV OREKIT_DATA_PATH=/app/orekit-data
+ENV PYTHONPATH=/app
+
 EXPOSE 50052
 
-# Запуск сервиса
 CMD ["python", "orbit_service.py"]

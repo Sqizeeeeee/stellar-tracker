@@ -29,14 +29,15 @@ services:
     build:
       context: .
       dockerfile: orbit-service/Dockerfile
-    container_name: orbit-service
     environment:
-      - PYTHONPATH=/app/proto
+      - OREKIT_DATA=/app/orekit-data
+      - PYTHONPATH=/app
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     ports:
       - "50052:50052"
     networks:
       - astro-net
-    command: ["python", "orbit_service.py"]
+
 networks:
   astro-net:
     driver: bridge

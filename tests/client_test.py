@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import grpc
 import time
 import sys
@@ -72,18 +71,33 @@ def test_orbit_service_directly():
 
     request = astro_pb2.ObservationsRequest(
         request_id=f"direct-test-{int(time.time())}",
-        object_name="DirectTestObject"
+        object_name="ISS"
     )
 
-    # Минимальный набор наблюдений
-    for i in range(3):
-        obs = request.observations.add()
-        obs.obs_time = f"2024-01-01T0{i}:00:00Z"
-        obs.ra_deg = 120.5 + i * 0.1
-        obs.dec_deg = 45.2 + i * 0.1
-        obs.station = "500"
+    # Реальные наблюдения МКС из JPL Horizons
+    # Станция: München (48.14°N, 11.58°E, 520m)
+    # Период: 2024-12-15 19:00-19:10 UTC
+    iss_observations = [
+        ("2024-12-15T19:00:00.000Z", 263.345520, -19.178520),
+        ("2024-12-15T19:05:00.000Z", 275.004090, -32.316960),
+        ("2024-12-15T19:10:00.000Z", 284.815770, -45.982000),
+    ]
 
-    print("📤 Отправляем запрос к Orbit Service...")
+    for obs_time, ra, dec in iss_observations:
+        obs = request.observations.add()
+        obs.obs_time = obs_time
+        obs.ra_deg = ra
+        obs.dec_deg = dec
+        obs.rms_ra = 1.0  # 1 угловая секунда
+        obs.rms_dec = 1.0
+        obs.station = "48.14,11.58,520.0"  # München
+        obs.catalog = "JPL-Horizons"
+
+    print(f"📤 Отправляем {len(iss_observations)} реальных наблюдений МКС к Orbit Service...")
+    print(f"   Источник: JPL Horizons")
+    print(f"   Объект: ISS (NAIF ID -125544)")
+    for i, (t, ra, dec) in enumerate(iss_observations, 1):
+        print(f"   {i}. {t} - RA: {ra:9.6f}°, Dec: {dec:9.6f}°")
 
     try:
         response = stub.Calculate(request, timeout=10)
@@ -91,22 +105,38 @@ def test_orbit_service_directly():
         print(f"❌ RPC Error: {e.code()} — {e.details()}")
         return
 
-    print("✅ Orbit Service ответил:")
+    print("\n✅ Orbit Service ответил:")
     print(f"   Request ID: {response.request_id}")
     print(f"   Success:    {response.success}")
 
     if response.success:
         orbit = response.orbit
         print("   Элементы орбиты:")
-        print(f"     a  = {orbit.a_au}")
-        print(f"     e  = {orbit.e}")
-        print(f"     i  = {orbit.i_deg}°")
-        print(f"     ω  = {orbit.omega_deg}°")
-        print(f"     Ω  = {orbit.big_mega_deg}°")
-        print(f"     M  = {orbit.m_deg}°")
+        print(f"     a  = {orbit.a_au:.8f} AU ({orbit.a_au * 149597870.7:.1f} km)")
+        print(f"     e  = {orbit.e:.6f}")
+        print(f"     i  = {orbit.i_deg:.2f}°")
+        print(f"     ω  = {orbit.omega_deg:.2f}°")
+        print(f"     Ω  = {orbit.big_mega_deg:.2f}°")
+        print(f"     M  = {orbit.m_deg:.2f}°")
         print(f"     Epoch = {orbit.epoch}")
+        
+        # Проверка на реалистичность для МКС
+        altitude_km = (orbit.a_au * 149597870.7) - 6371  # радиус Земли
+        print(f"\n   📊 Анализ орбиты:")
+        print(f"      Высота: {altitude_km:.0f} км")
+        print(f"      Ожидаемая высота МКС: ~410 км")
+        print(f"      Ожидаемый наклон МКС: ~51.6°")
+        
+        if 350 < altitude_km < 450 and orbit.e < 0.01 and 50 < orbit.i_deg < 53:
+            print(f"      ✅ Орбита соответствует параметрам МКС!")
+        elif 200 < altitude_km < 2000 and orbit.e < 0.2:
+            print(f"      ✅ Орбита реалистична для LEO")
+        elif altitude_km < 0:
+            print(f"      ❌ Орбита под поверхностью Земли")
+        else:
+            print(f"      ⚠️  Орбита необычная")
     else:
-        print(f"   Ошибка: {response.error}")
+        print(f"   ❌ Ошибка: {response.error}")
 
 
 # ===========================
@@ -126,15 +156,14 @@ def test_orchestrator():
 
     request = astro_pb2.ObservationsRequest(
         request_id=f"test-{int(time.time())}",
-        object_name="TestAsteroid"
+        object_name="ISS-Full-Test"
     )
 
+    # Те же реальные наблюдения МКС
     observations = [
-        ("2024-01-01T00:00:00Z", 120.5, 45.2),
-        ("2024-01-01T00:30:00Z", 120.6, 45.3),
-        ("2024-01-01T01:00:00Z", 120.7, 45.4),
-        ("2024-01-01T01:30:00Z", 120.8, 45.5),
-        ("2024-01-01T02:00:00Z", 120.9, 45.6),
+        ("2024-12-15T19:00:00.000Z", 263.345520, -19.178520),
+        ("2024-12-15T19:05:00.000Z", 275.004090, -32.316960),
+        ("2024-12-15T19:10:00.000Z", 284.815770, -45.982000),
     ]
 
     for i, (t, ra, dec) in enumerate(observations):
@@ -142,9 +171,11 @@ def test_orchestrator():
         obs.obs_time = t
         obs.ra_deg = ra
         obs.dec_deg = dec
-        obs.station = "500"
-        obs.catalog = "TestCatalog"
-        print(f"📡 Observation {i+1}: RA={ra}, Dec={dec}, Time={t}")
+        obs.rms_ra = 1.0
+        obs.rms_dec = 1.0
+        obs.station = "48.14,11.58,520.0"
+        obs.catalog = "JPL-Horizons"
+        print(f"📡 Observation {i+1}: RA={ra:9.6f}°, Dec={dec:9.6f}°, Time={t}")
 
     print(f"\n📤 Отправляем запрос в Orchestrator ({request.request_id})...")
 
@@ -162,10 +193,11 @@ def test_orchestrator():
         risk = response.risk
         print("   Риск столкновения:")
         print(f"     Уровень:                {risk.risk_level}")
-        print(f"     MOID Земли (AU):        {risk.moid_earth_au}")
+        print(f"     Перигелий (AU):         {risk.perihelion_au:.6f}")
+        print(f"     MOID Земли (AU):        {risk.moid_earth_au:.6f}")
         print(f"     Потенциальное событие:  {risk.potential_impact}")
     else:
-        print(f"   Ошибка: {response.error}")
+        print(f"   ❌ Ошибка: {response.error}")
 
 
 # ===========================
