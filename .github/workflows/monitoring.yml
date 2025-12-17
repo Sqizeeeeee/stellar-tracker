@@ -34,18 +34,19 @@ jobs:
     - name: Validate alert rules
       run: |
         echo "🔍 Validating Prometheus alert rules..."
-        if [ -d monitoring/prometheus/rules ] && [ -n "$(ls -A monitoring/prometheus/rules/*.yml 2>/dev/null)" ]; then
+        if [ -d monitoring/prometheus/rules ] && ls monitoring/prometheus/rules/*.yml >/dev/null 2>&1; then
           for rule_file in monitoring/prometheus/rules/*.yml; do
-            echo "Checking $rule_file..."
+            filename=$(basename "$rule_file")
+            echo "Checking $filename..."
             docker run --rm \
               -v $(pwd)/monitoring/prometheus:/prometheus-config \
               --entrypoint /bin/promtool \
               prom/prometheus:latest \
-              check rules /prometheus-config/rules/$(basename $rule_file)
+              check rules "/prometheus-config/rules/$filename"
           done
           echo "✅ Alert rules are valid"
         else
-          echo "ℹ️ No alert rules found or directory empty"
+          echo "ℹ️ No alert rules found, skipping validation"
         fi
   
   validate-promtail:
