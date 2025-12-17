@@ -33,7 +33,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pandas \
     grpcio \
     grpcio-tools \
-    protobuf
+    protobuf \
+    prometheus-client
 
 # Копируем proto файлы и генерируем Python код
 COPY proto/ /app/proto/

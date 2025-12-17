@@ -1,0 +1,164 @@
+name: Monitoring Configuration
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'monitoring/**'
+      - 'docker-compose.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'monitoring/**'
+      - 'docker-compose.yml'
+
+jobs:
+  validate-prometheus:
+    runs-on: ubuntu-latest
+    name: Validate Prometheus Config
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Validate Prometheus configuration
+      run: |
+        echo "🔍 Validating Prometheus configuration..."
+        docker run --rm \
+          -v $(pwd)/monitoring/prometheus:/prometheus-config \
+          prom/prometheus:latest \
+          promtool check config /prometheus-config/prometheus.yml
+        echo "✅ Prometheus config is valid"
+    
+    - name: Validate alert rules
+      run: |
+        echo "🔍 Validating Prometheus alert rules..."
+        if [ -d monitoring/prometheus/rules ]; then
+          docker run --rm \
+            -v $(pwd)/monitoring/prometheus:/prometheus-config \
+            prom/prometheus:latest \
+            promtool check rules /prometheus-config/rules/*.yml
+          echo "✅ Alert rules are valid"
+        else
+          echo "ℹ️ No alert rules directory found"
+        fi
+  
+  validate-promtail:
+    runs-on: ubuntu-latest
+    name: Validate Promtail Config
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Validate Promtail configuration
+      run: |
+        echo "🔍 Validating Promtail configuration..."
+        docker run --rm \
+          -v $(pwd)/monitoring/promtail:/promtail-config \
+          grafana/promtail:latest \
+          -config.file=/promtail-config/promtail.yml \
+          -dry-run
+        echo "✅ Promtail config is valid"
+  
+  validate-docker-compose:
+    runs-on: ubuntu-latest
+    name: Validate Monitoring Stack
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Validate docker-compose with monitoring profile
+      run: |
+        echo "🔍 Validating Docker Compose with monitoring profile..."
+        docker compose --profile monitoring config --quiet
+        echo "✅ Docker Compose configuration is valid"
+    
+    - name: Check service health definitions
+      run: |
+        echo "🔍 Checking health check definitions..."
+        if grep -q "healthcheck:" docker-compose.yml; then
+          echo "✅ Health checks are defined"
+        else
+          echo "⚠️ Consider adding health checks to services"
+        fi
+    
+    - name: Verify monitoring profile exists
+      run: |
+        echo "🔍 Verifying monitoring profile..."
+        if grep -q 'profiles:.*monitoring' docker-compose.yml; then
+          echo "✅ Monitoring profile is configured"
+        else
+          echo "❌ Monitoring profile not found"
+          exit 1
+        fi
+  
+  test-monitoring-stack:
+    runs-on: ubuntu-latest
+    name: Test Monitoring Stack
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Start monitoring stack
+      run: |
+        echo "🚀 Starting monitoring services..."
+        docker compose --profile monitoring up -d
+        sleep 30
+    
+    - name: Check Prometheus health
+      run: |
+        echo "🔍 Checking Prometheus health..."
+        curl -f http://localhost:9090/-/healthy || exit 1
+        echo "✅ Prometheus is healthy"
+    
+    - name: Check Grafana health
+      run: |
+        echo "🔍 Checking Grafana health..."
+        curl -f http://localhost:3000/api/health || exit 1
+        echo "✅ Grafana is healthy"
+    
+    - name: Check Loki health
+      run: |
+        echo "🔍 Checking Loki health..."
+        curl -f http://localhost:3100/ready || exit 1
+        echo "✅ Loki is healthy"
+    
+    - name: Verify Prometheus targets
+      run: |
+        echo "🔍 Verifying Prometheus targets..."
+        curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets | length'
+    
+    - name: Stop monitoring stack
+      if: always()
+      run: |
+        docker compose --profile monitoring down -v
+  
+  monitoring-report:
+    runs-on: ubuntu-latest
+    name: Monitoring Quality Gate
+    needs: [validate-prometheus, validate-promtail, validate-docker-compose, test-monitoring-stack]
+    if: always()
+    
+    steps:
+    - name: Generate report
+      run: |
+        echo "# 📊 Monitoring Configuration Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- Prometheus Config: ${{ needs.validate-prometheus.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Promtail Config: ${{ needs.validate-promtail.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Docker Compose: ${{ needs.validate-docker-compose.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Stack Test: ${{ needs.test-monitoring-stack.result }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.validate-prometheus.result }}" != "success" ] || \
+           [ "${{ needs.validate-promtail.result }}" != "success" ] || \
+           [ "${{ needs.validate-docker-compose.result }}" != "success" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "❌ **Monitoring configuration has issues**" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **All monitoring checks passed!**" >> $GITHUB_STEP_SUMMARY

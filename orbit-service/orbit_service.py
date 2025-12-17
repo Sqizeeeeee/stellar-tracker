@@ -12,6 +12,7 @@ from datetime import datetime
 import grpc
 import jpype
 import jpype.imports
+from prometheus_client import start_http_server, Counter, Histogram, Gauge
 
 # ============================================================
 # 1) ИНИЦИАЛИЗАЦИЯ JVM И OREKIT
@@ -262,12 +263,16 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
         Returns:
             OrbitResponse с орбитальными элементами
         """
+        ACTIVE_ORBIT_REQUESTS.inc()
+        ORBIT_CALCULATIONS.inc()
+        
         try:
-            print(f"📡 Получен запрос {request.request_id} для объекта '{request.object_name}'")
-            print(f"   Наблюдений: {len(request.observations)}")
-            
-            if len(request.observations) < 3:
-                raise ValueError("Необходимо минимум 3 наблюдения для определения орбиты")
+            with ORBIT_DURATION.time():
+                print(f"📡 Получен запрос {request.request_id} для объекта '{request.object_name}'")
+                print(f"   Наблюдений: {len(request.observations)}")
+                
+                if len(request.observations) < 3:
+                    raise ValueError("Необходимо минимум 3 наблюдения для определения орбиты")
             
             # Извлекаем координаты станции
             first_obs = request.observations[0]
@@ -352,14 +357,37 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
                 success=False,
                 error=f"OrbitService error: {str(ex)}"
             )
+        except Exception as ex:
+            ORBIT_ERRORS.inc()
+            print(f"❌ Ошибка в OrbitService: {str(ex)}")
+            import traceback
+            traceback.print_exc()
+            
+            return astro_pb2.OrbitResponse(
+                request_id=request.request_id,
+                success=False,
+                error=f"OrbitService error: {str(ex)}"
+            )
+        finally:
+            ACTIVE_ORBIT_REQUESTS.dec()
 
 
 # ============================================================
 # 5) ЗАПУСК СЕРВИСА
 # ============================================================
 
+# Prometheus метрики
+ORBIT_CALCULATIONS = Counter('orbit_calculations_total', 'Total orbit calculations performed')
+ORBIT_DURATION = Histogram('orbit_calculation_duration_seconds', 'Time spent on orbit calculation')
+ORBIT_ERRORS = Counter('orbit_calculation_errors_total', 'Total orbit calculation errors')
+ACTIVE_ORBIT_REQUESTS = Gauge('orbit_service_active_requests', 'Number of active orbit requests')
+
 def serve():
     """Запускает gRPC сервер"""
+    # Запускаем HTTP сервер для Prometheus метрик на порту 8002
+    start_http_server(8002)
+    print("📊 Prometheus metrics доступны на http://localhost:8002/metrics")
+    
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
     astro_pb2_grpc.add_OrbitServiceServicer_to_server(OrbitServiceServicer(), server)
     server.add_insecure_port('[::]:50052')
