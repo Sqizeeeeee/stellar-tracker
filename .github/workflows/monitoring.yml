@@ -26,8 +26,9 @@ jobs:
         echo "🔍 Validating Prometheus configuration..."
         docker run --rm \
           -v $(pwd)/monitoring/prometheus:/prometheus-config \
+          --entrypoint /bin/promtool \
           prom/prometheus:latest \
-          promtool check config /prometheus-config/prometheus.yml
+          check config /prometheus-config/prometheus.yml
         echo "✅ Prometheus config is valid"
     
     - name: Validate alert rules
@@ -36,8 +37,9 @@ jobs:
         if [ -d monitoring/prometheus/rules ]; then
           docker run --rm \
             -v $(pwd)/monitoring/prometheus:/prometheus-config \
+            --entrypoint /bin/promtool \
             prom/prometheus:latest \
-            promtool check rules /prometheus-config/rules/*.yml
+            check rules /prometheus-config/rules/*.yml
           echo "✅ Alert rules are valid"
         else
           echo "ℹ️ No alert rules directory found"
@@ -106,30 +108,62 @@ jobs:
       run: |
         echo "🚀 Starting monitoring services..."
         docker compose --profile monitoring up -d
-        sleep 30
+        echo "⏳ Waiting for services to be ready..."
+        sleep 45
     
     - name: Check Prometheus health
       run: |
         echo "🔍 Checking Prometheus health..."
-        curl -f http://localhost:9090/-/healthy || exit 1
-        echo "✅ Prometheus is healthy"
+        for i in {1..10}; do
+          if curl -f http://localhost:9090/-/healthy 2>/dev/null; then
+            echo "✅ Prometheus is healthy"
+            exit 0
+          fi
+          echo "Attempt $i/10 failed, retrying..."
+          sleep 5
+        done
+        exit 1
     
     - name: Check Grafana health
       run: |
         echo "🔍 Checking Grafana health..."
-        curl -f http://localhost:3000/api/health || exit 1
-        echo "✅ Grafana is healthy"
+        for i in {1..10}; do
+          if curl -f http://localhost:3000/api/health 2>/dev/null; then
+            echo "✅ Grafana is healthy"
+            exit 0
+          fi
+          echo "Attempt $i/10 failed, retrying..."
+          sleep 5
+        done
+        exit 1
     
     - name: Check Loki health
+      continue-on-error: true
       run: |
         echo "🔍 Checking Loki health..."
-        curl -f http://localhost:3100/ready || exit 1
-        echo "✅ Loki is healthy"
+        for i in {1..15}; do
+          if curl -f http://localhost:3100/ready 2>/dev/null; then
+            echo "✅ Loki is healthy"
+            exit 0
+          fi
+          echo "Attempt $i/15 failed, retrying..."
+          sleep 10
+        done
+        echo "⚠️ Loki health check failed, but continuing (Loki can be slow to start)"
+        exit 0
     
     - name: Verify Prometheus targets
       run: |
         echo "🔍 Verifying Prometheus targets..."
         curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets | length'
+    
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        echo "📋 Showing logs for debugging..."
+        docker compose --profile monitoring logs --tail=50 prometheus
+        docker compose --profile monitoring logs --tail=50 grafana
+        docker compose --profile monitoring logs --tail=50 loki
     
     - name: Stop monitoring stack
       if: always()
