@@ -23,9 +23,10 @@ services:
     build:
       context: .
       dockerfile: collision-service/Dockerfile
+    container_name: collision-service
     ports:
       - "50053:50053"
-      - "8001:8001"  # Prometheus metrics
+      - "8003:8003"  # Prometheus metrics
     networks:
       - astro-net
       - monitoring

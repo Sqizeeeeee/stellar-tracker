@@ -180,7 +180,7 @@
           "datasource": {
             "type": "prometheus"
           },
-          "expr": "up{job=~\"collision-service|orbit-service|orchestrator\",instance=~\".*:800[0-2]\"}",
+          "expr": "up{job=\"orchestrator\",instance=\"orchestrator:8000\"} or up{job=\"orbit-service\",instance=\"orbit-service:8002\"} or up{job=\"collision-service\",instance=\"collision-service:8003\"}",
           "refId": "A",
           "legendFormat": "{{job}}"
         }

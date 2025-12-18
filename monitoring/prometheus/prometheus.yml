@@ -48,7 +48,7 @@ scrape_configs:
   # Collision Service
   - job_name: 'collision-service'
     static_configs:
-      - targets: ['collision-service:8001']
+      - targets: ['collision-service:8003']
         labels:
           service: 'collision-service'
           team: 'backend'
