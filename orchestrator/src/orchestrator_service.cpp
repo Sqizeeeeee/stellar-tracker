@@ -4,6 +4,7 @@
 #include <optional>
 #include <chrono>
 #include "astro.grpc.pb.h"
+#include "metrics_server.h"
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -21,9 +22,11 @@ using astro::CollisionService;
 class OrchestratorServiceImpl final : public OrchestratorService::Service {
 public:
     explicit OrchestratorServiceImpl(const std::string& collision_addr,
-                                     const std::optional<std::string>& orbit_addr_opt = std::nullopt)
+                                     const std::optional<std::string>& orbit_addr_opt = std::nullopt,
+                                     MetricsServer* metrics = nullptr)
         : collision_stub_(CollisionService::NewStub(
-              grpc::CreateChannel(collision_addr, grpc::InsecureChannelCredentials()))) {
+              grpc::CreateChannel(collision_addr, grpc::InsecureChannelCredentials()))),
+          metrics_(metrics) {
 
         if (orbit_addr_opt.has_value()) {
             orbit_stub_ = OrbitService::NewStub(
@@ -38,6 +41,11 @@ public:
     Status Process(ServerContext* context,
                const ObservationsRequest* request,
                RiskResponse* reply) override {
+        if (metrics_) {
+            metrics_->IncrementRequests();
+            metrics_->IncrementActive();
+        }
+
         reply->set_request_id(request->request_id());
 
         // Используем unique_ptr вместо прямого создания
@@ -52,12 +60,20 @@ public:
             if (!orbit_status.ok()) {
                 reply->set_success(false);
                 reply->set_error("OrbitService недоступен: " + orbit_status.error_message());
+                if (metrics_) {
+                    metrics_->IncrementFailed();
+                    metrics_->DecrementActive();
+                }
                 return Status::OK;
             }
             
             if (!orbit_resp->success()) {
                 reply->set_success(false);
                 reply->set_error("OrbitService ошибка: " + orbit_resp->error());
+                if (metrics_) {
+                    metrics_->IncrementFailed();
+                    metrics_->DecrementActive();
+                }
                 return Status::OK;
             }
         } else {
@@ -80,14 +96,23 @@ public:
         if (!collision_status.ok()) {
             reply->set_success(false);
             reply->set_error("CollisionService ошибка: " + collision_status.error_message());
+            if (metrics_) {
+                metrics_->IncrementFailed();
+                metrics_->DecrementActive();
+            }
             return Status::OK;
         }
 
         reply->set_success(true);
+        if (metrics_) {
+            metrics_->IncrementSuccess();
+            metrics_->DecrementActive();
+        }
         return Status::OK;
     }
 
 private:
     std::unique_ptr<OrbitService::Stub> orbit_stub_;
     std::unique_ptr<CollisionService::Stub> collision_stub_;
+    MetricsServer* metrics_;
 };

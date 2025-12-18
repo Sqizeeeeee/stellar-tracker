@@ -1,5 +1,6 @@
 #include <grpcpp/grpcpp.h>
 #include <iostream>
+#include "metrics_server.h"
 #include "orchestrator_service.cpp"
 #include "astro.grpc.pb.h"
 
@@ -18,7 +19,11 @@ int main() {
 
     std::cout << "Orchestrator стартует...\n";
 
-    OrchestratorServiceImpl service(collision_addr, orbit_addr_opt);
+    // Создаем metrics server
+    MetricsServer metrics;
+    metrics.Start(8000);
+
+    OrchestratorServiceImpl service(collision_addr, orbit_addr_opt, &metrics);
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort("0.0.0.0:50051", grpc::InsecureServerCredentials());
