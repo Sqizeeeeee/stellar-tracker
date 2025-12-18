@@ -34,19 +34,24 @@ jobs:
     - name: Validate alert rules
       run: |
         echo "🔍 Validating Prometheus alert rules..."
-        if [ -d monitoring/prometheus/rules ] && ls monitoring/prometheus/rules/*.yml >/dev/null 2>&1; then
-          for rule_file in monitoring/prometheus/rules/*.yml; do
-            filename=$(basename "$rule_file")
-            echo "Checking $filename..."
-            docker run --rm \
-              -v $(pwd)/monitoring/prometheus:/prometheus-config \
-              --entrypoint /bin/promtool \
-              prom/prometheus:latest \
-              check rules "/prometheus-config/rules/$filename"
-          done
-          echo "✅ Alert rules are valid"
+        if [ -d monitoring/prometheus/rules ]; then
+          rule_count=$(find monitoring/prometheus/rules -name '*.yml' -type f | wc -l | tr -d ' ')
+          if [ "$rule_count" -gt 0 ]; then
+            echo "Found $rule_count rule file(s)"
+            find monitoring/prometheus/rules -name '*.yml' -type f | while read -r rule_file; do
+              echo "Checking $(basename "$rule_file")..."
+              docker run --rm \
+                -v "$(pwd)/monitoring/prometheus/rules:/rules:ro" \
+                --entrypoint /bin/promtool \
+                prom/prometheus:latest \
+                check rules "/rules/$(basename "$rule_file")"
+            done
+            echo "✅ Alert rules are valid"
+          else
+            echo "ℹ️ No alert rules found, skipping validation"
+          fi
         else
-          echo "ℹ️ No alert rules found, skipping validation"
+          echo "ℹ️ Rules directory not found, skipping validation"
         fi
   
   validate-promtail:
@@ -57,15 +62,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     
-    - name: Check Promtail YAML syntax
+    - name: Validate Promtail YAML
       run: |
-        echo "🔍 Validating Promtail YAML syntax..."
-        if command -v yamllint &> /dev/null; then
-          yamllint monitoring/promtail/promtail.yml || echo "⚠️ yamllint not available, skipping"
-        else
-          python3 -c "import yaml; yaml.safe_load(open('monitoring/promtail/promtail.yml'))"
-          echo "✅ Promtail YAML is valid"
-        fi
+        echo "🔍 Validating Promtail YAML..."
+        python3 -c "import yaml; yaml.safe_load(open('monitoring/promtail/promtail.yml'))"
+        echo "✅ Promtail YAML is valid"
   
   validate-docker-compose:
     runs-on: ubuntu-latest
