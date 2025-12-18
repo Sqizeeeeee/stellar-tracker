@@ -33,6 +33,17 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
+    - name: Build orbit service image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./orbit-service/Dockerfile
+        push: false
+        tags: orbit-service-app:latest
+        load: true
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
     - name: Build collision service image
       uses: docker/build-push-action@v4
       continue-on-error: false
@@ -54,7 +65,8 @@ jobs:
         
         echo "=== Image verification ==="
         docker run --rm orchestrator-app:latest echo "✅ Orchestrator image OK"
-        docker run --rm collision-service-app:latest echo "✅ Collision service image OK"
+        docker run --rm orbit-service-app:latest python --version && echo "✅ Orbit service image OK"
+        docker run --rm collision-service-app:latest python --version && echo "✅ Collision service image OK"
     
     - name: Start services with Docker Compose
       run: |
@@ -68,6 +80,7 @@ jobs:
         docker compose ps
         
         echo "=== Network connectivity ==="
+        docker compose exec -T orchestrator ping -c 2 orbit-service || echo "⚠️ Orbit service not reachable"
         docker compose exec -T orchestrator ping -c 2 collision-service || echo "⚠️ Collision service not reachable"
     
     - name: Show service logs
@@ -75,6 +88,9 @@ jobs:
       run: |
         echo "=== Orchestrator logs ==="
         docker compose logs orchestrator
+        
+        echo "=== Orbit service logs ==="
+        docker compose logs orbit-service
         
         echo "=== Collision service logs ==="
         docker compose logs collision-service
@@ -124,6 +140,18 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
+    - name: Build and push orbit service image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./orbit-service/Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orbit:latest
+          ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orbit:${{ steps.meta.outputs.sha_short }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
     - name: Build and push collision service image
       uses: docker/build-push-action@v4
       with:
@@ -144,6 +172,8 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orchestrator:latest\`" >> $GITHUB_STEP_SUMMARY
         echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orchestrator:${{ steps.meta.outputs.sha_short }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orbit:latest\`" >> $GITHUB_STEP_SUMMARY
+        echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-orbit:${{ steps.meta.outputs.sha_short }}\`" >> $GITHUB_STEP_SUMMARY
         echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-collision:latest\`" >> $GITHUB_STEP_SUMMARY
         echo "- \`ghcr.io/${{ steps.meta.outputs.repo_lowercase }}-collision:${{ steps.meta.outputs.sha_short }}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY

@@ -30,26 +30,28 @@ jobs:
       run: |
         echo "🔍 Checking Python syntax..."
         python -m py_compile collision-service/server.py
+        python -m py_compile orbit-service/orbit_service.py
+        python -m py_compile orbit-service/orbit_algorithms.py
         echo "✅ Python syntax OK"
     
     - name: Run flake8
       continue-on-error: true
       run: |
         echo "🔍 Running flake8..."
-        flake8 collision-service/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 collision-service/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 collision-service/ orbit-service/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 collision-service/ orbit-service/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Check code formatting with black
       continue-on-error: true
       run: |
         echo "🔍 Checking code formatting..."
-        black --check collision-service/ || echo "⚠️ Code formatting could be improved"
+        black --check collision-service/ orbit-service/ || echo "⚠️ Code formatting could be improved"
     
     - name: Check import sorting
       continue-on-error: true
       run: |
         echo "🔍 Checking import sorting..."
-        isort --check-only collision-service/ || echo "⚠️ Imports could be better organized"
+        isort --check-only collision-service/ orbit-service/ || echo "⚠️ Imports could be better organized"
 
   lint-docker:
     runs-on: ubuntu-latest
@@ -70,6 +72,7 @@ jobs:
         echo "🔍 Checking Dockerfile presence..."
         test -f Dockerfile && echo "✅ Main Dockerfile exists" || { echo "❌ Main Dockerfile missing"; exit 1; }
         test -f collision-service/Dockerfile && echo "✅ Collision service Dockerfile exists" || { echo "❌ Collision Dockerfile missing"; exit 1; }
+        test -f orbit-service/Dockerfile && echo "✅ Orbit service Dockerfile exists" || { echo "❌ Orbit Dockerfile missing"; exit 1; }
     
     - name: Lint Dockerfiles with hadolint
       uses: hadolint/hadolint-action@v3.1.0
@@ -82,6 +85,13 @@ jobs:
       uses: hadolint/hadolint-action@v3.1.0
       with:
         dockerfile: collision-service/Dockerfile
+        failure-threshold: warning
+      continue-on-error: true
+    
+    - name: Lint orbit-service Dockerfile
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: orbit-service/Dockerfile
         failure-threshold: warning
       continue-on-error: true
 
