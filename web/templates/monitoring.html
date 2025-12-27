@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}System Monitoring - StellarTracker{% endblock %}
+
+{% block content %}
+<div class="monitoring-page">
+    <h2 class="page-title">System Monitoring</h2>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🔧</div>
+            <div class="stat-content">
+                <h3>Orchestrator</h3>
+                <p class="stat-value" id="orchestratorStatus">-</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🛰️</div>
+            <div class="stat-content">
+                <h3>Orbit Service</h3>
+                <p class="stat-value" id="orbitStatus">-</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">💥</div>
+            <div class="stat-content">
+                <h3>Collision Service</h3>
+                <p class="stat-value" id="collisionStatus">-</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Service Health</h3>
+        <div id="healthDetails">
+            <p class="empty-state">Loading health information...</p>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Grafana Dashboard</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            View detailed metrics and performance graphs
+        </p>
+        <a href="http://localhost:3000" target="_blank" class="btn btn-primary">
+            📊 Open Grafana
+        </a>
+    </div>
+</div>
+
+<script>
+// Load health status
+async function loadHealthStatus() {
+    try {
+        const response = await fetch('/api/health');
+        const health = await response.json();
+        
+        document.getElementById('orchestratorStatus').textContent = health.orchestrator || '-';
+        document.getElementById('orbitStatus').textContent = health.orbit_service || '-';
+        document.getElementById('collisionStatus').textContent = health.collision_service || '-';
+        
+        // Update health details
+        const detailsDiv = document.getElementById('healthDetails');
+        detailsDiv.innerHTML = Object.entries(health).map(([service, status]) => `
+            <div class="health-item" style="display: flex; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                <span style="color: var(--text-primary);">${service.replace('_', ' ').toUpperCase()}</span>
+                <span style="color: ${status === 'healthy' ? 'var(--success-color)' : 'var(--danger-color)'}; font-weight: 600;">
+                    ${status === 'healthy' ? '✓ ' : '✗ '}${status.toUpperCase()}
+                </span>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Failed to load health status:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadHealthStatus();
+    setInterval(loadHealthStatus, 10000); // Update every 10 seconds
+});
+</script>
+{% endblock %}

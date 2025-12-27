@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Objects Catalog - StellarTracker{% endblock %}
+
+{% block content %}
+<div class="objects-page">
+    <h2 class="page-title">Objects Catalog</h2>
+    
+    <div class="panel">
+        <div class="filters">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Filter by Risk</label>
+                    <select id="riskFilter">
+                        <option value="all">All Levels</option>
+                        <option value="high">High Risk</option>
+                        <option value="moderate">Moderate Risk</option>
+                        <option value="low">Low Risk</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Search</label>
+                    <input type="text" id="searchInput" placeholder="Search by name...">
+                </div>
+            </div>
+        </div>
+        
+        <div id="objectsList" class="objects-list">
+            <p class="empty-state">No objects in catalog yet. Upload observations to get started.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

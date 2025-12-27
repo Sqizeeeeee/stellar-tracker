@@ -1,0 +1,116 @@
+.upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.observations-container {
+    margin: 1.5rem 0;
+}
+
+.observations-container h4 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.observation-item {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.observation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.observation-number {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.remove-observation {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+}
+
+.remove-observation:hover {
+    color: #dc2626;
+}
+
+.status-box {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    min-height: 200px;
+}
+
+.status-box.processing {
+    border-color: var(--primary-color);
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+.status-box.success {
+    border-color: var(--success-color);
+    background-color: rgba(34, 197, 94, 0.05);
+}
+
+.status-box.error {
+    border-color: var(--danger-color);
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.result-container {
+    margin-top: 1.5rem;
+}
+
+.result-section {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.result-section h5 {
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.result-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.result-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+@media (max-width: 968px) {
+    .upload-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -62,3 +62,9 @@ scrape_configs:
           service: 'orbit-service'
           team: 'backend'
     metrics_path: '/metrics'
+
+  # Веб-сервис
+  - job_name: 'web-service'
+    static_configs:
+      - targets: ['web:5001']
+    metrics_path: '/metrics'  # если добавишь Prometheus метрики в Flask

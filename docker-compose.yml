@@ -6,11 +6,11 @@ services:
       dockerfile: Dockerfile
     container_name: orchestrator
     ports:
-      - "50051:50051"
-      - "8000:8000"  # Prometheus metrics
+      - "50051:${ORCHESTRATOR_PORT:-50051}"
+      - "${ORCHESTRATOR_METRICS_PORT:-8000}:8000"
     environment:
-      - COLLISION_SERVICE_ADDR=collision-service:50053
-      - ORBIT_SERVICE_ADDR=orbit-service:50052
+      - COLLISION_SERVICE_ADDR=${COLLISION_SERVICE_ADDR:-collision-service:50053}
+      - ORBIT_SERVICE_ADDR=${ORBIT_SERVICE_ADDR:-orbit-service:50052}
     networks:
       - astro-net
       - monitoring
@@ -25,8 +25,8 @@ services:
       dockerfile: collision-service/Dockerfile
     container_name: collision-service
     ports:
-      - "50053:50053"
-      - "8003:8003"  # Prometheus metrics
+      - "${COLLISION_SERVICE_PORT:-50053}:50053"
+      - "${COLLISION_SERVICE_METRICS_PORT:-8003}:8003"
     networks:
       - astro-net
       - monitoring
@@ -36,21 +36,48 @@ services:
       context: .
       dockerfile: orbit-service/Dockerfile
     environment:
-      - OREKIT_DATA=/app/orekit-data
+      - OREKIT_DATA=${OREKIT_DATA:-/app/orekit-data}
       - PYTHONPATH=/app
-      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      - JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}
     ports:
-      - "50052:50052"
-      - "8002:8002"  # Prometheus metrics
+      - "${ORBIT_SERVICE_PORT:-50052}:50052"
+      - "${ORBIT_SERVICE_METRICS_PORT:-8002}:8002"
     networks:
       - astro-net
       - monitoring
+
+  # НОВЫЙ ВЕБ-ИНТЕРФЕЙС
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    container_name: stellartracker-web
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-stellartracker-secret-key}
+      - ORCHESTRATOR_HOST=${ORCHESTRATOR_HOST:-orchestrator}
+      - ORCHESTRATOR_PORT=${ORCHESTRATOR_PORT:-50051}
+      - ORBIT_SERVICE_HOST=${ORBIT_SERVICE_HOST:-orbit-service}
+      - ORBIT_SERVICE_PORT=${ORBIT_SERVICE_PORT:-50052}
+      - COLLISION_SERVICE_HOST=${COLLISION_SERVICE_HOST:-collision-service}
+      - COLLISION_SERVICE_PORT=${COLLISION_SERVICE_PORT:-50053}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - orchestrator
+    networks:
+      - astro-net
+    restart: unless-stopped
+    volumes:
+      - ./web/static:/app/web/static
+      - ./web/templates:/app/web/templates
 
   # Мониторинг - запускается через profile
   prometheus:
     image: prom/prometheus:latest
     container_name: stellartracker-prometheus
-    profiles: ["monitoring"]
+    # profiles: ["monitoring"]
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -76,7 +103,6 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: stellartracker-grafana
-    profiles: ["monitoring"]
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-stellartracker_admin}
@@ -99,7 +125,7 @@ services:
   loki:
     image: grafana/loki:latest
     container_name: stellartracker-loki
-    profiles: ["monitoring"]
+    # profiles: ["monitoring"]  # Закомментируй эту строку
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki-data:/loki
@@ -112,7 +138,7 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: stellartracker-promtail
-    profiles: ["monitoring"]
+    # profiles: ["monitoring"]  # Закомментируй эту строку
     volumes:
       - ./monitoring/promtail/promtail.yml:/etc/promtail/config.yml:ro
       - /var/log:/var/log:ro
@@ -126,7 +152,7 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: stellartracker-node-exporter
-    profiles: ["monitoring"]
+    # profiles: ["monitoring"]  # Закомментируй эту строку
     command:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
@@ -144,7 +170,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: stellartracker-cadvisor
-    profiles: ["monitoring"]
+    # profiles: ["monitoring"]  # Закомментируй эту строку
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
