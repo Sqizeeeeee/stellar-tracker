@@ -18,16 +18,20 @@
                 <li><a href="/upload" class="{% if request.path == '/upload' %}active{% endif %}">Upload</a></li>
                 <li><a href="/objects" class="{% if request.path == '/objects' %}active{% endif %}">Objects</a></li>
                 <li><a href="/monitoring" class="{% if request.path == '/monitoring' %}active{% endif %}">Monitoring</a></li>
-            </ul>
-            <div class="user-section">
                 {% if current_user.is_authenticated %}
-                    <span class="username">👤 {{ current_user.username }}</span>
-                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
+                    <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                 {% endif %}
-            </div>
-            <div class="status-indicator" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span class="status-text">Connecting...</span>
+            </ul>
+            <div class="nav-right">
+                {% if current_user.is_authenticated %}
+                    <div class="user-section">
+                        <span class="username">👤 {{ current_user.username }}</span>
+                    </div>
+                {% endif %}
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
             </div>
         </div>
     </nav>

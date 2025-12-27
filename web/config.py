@@ -29,7 +29,7 @@ class Config:
     SOCKETIO_PING_INTERVAL = 25
     
     # Flask-Login
-    LOGIN_VIEW = 'login'
+    LOGIN_VIEW = 'auth.login'
     LOGIN_MESSAGE = 'Please log in to access this page.'
     
     @property

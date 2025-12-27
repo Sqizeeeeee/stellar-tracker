@@ -39,6 +39,7 @@ body {
     justify-content: space-between;
     align-items: center;
     min-height: 60px;
+    gap: 2rem;
 }
 
 .nav-brand {
@@ -82,10 +83,16 @@ body {
     border-bottom-color: var(--primary-color);
 }
 
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-shrink: 0;
+}
+
 .user-section {
     display: flex;
     align-items: center;
-    gap: 1rem;
 }
 
 .username {
@@ -99,9 +106,11 @@ body {
     font-size: 0.875rem;
 }
 
+/* Status Indicator */
 .status-indicator {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background-color: rgba(255, 255, 255, 0.05);

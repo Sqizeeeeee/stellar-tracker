@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: stellartracker-orchestrator:latest
     container_name: orchestrator
     ports:
       - "50051:${ORCHESTRATOR_PORT:-50051}"
@@ -23,6 +24,7 @@ services:
     build:
       context: .
       dockerfile: collision-service/Dockerfile
+    image: stellartracker-collision-service:latest
     container_name: collision-service
     ports:
       - "${COLLISION_SERVICE_PORT:-50053}:50053"
@@ -35,6 +37,7 @@ services:
     build:
       context: .
       dockerfile: orbit-service/Dockerfile
+    image: stellartracker-orbit-service:latest
     environment:
       - OREKIT_DATA=${OREKIT_DATA:-/app/orekit-data}
       - PYTHONPATH=/app
@@ -46,16 +49,18 @@ services:
       - astro-net
       - monitoring
 
-  # НОВЫЙ ВЕБ-ИНТЕРФЕЙС
+  
   web:
     build:
       context: .
       dockerfile: web/Dockerfile
+    image: stellartracker-web:latest
     container_name: stellartracker-web
     ports:
       - "5001:5001"
     environment:
-      - FLASK_ENV=${FLASK_ENV:-production}
+      - FLASK_ENV=development  # Включаем dev режим
+      - FLASK_DEBUG=1
       - SECRET_KEY=${SECRET_KEY:-stellartracker-secret-key}
       - ORCHESTRATOR_HOST=${ORCHESTRATOR_HOST:-orchestrator}
       - ORCHESTRATOR_PORT=${ORCHESTRATOR_PORT:-50051}
@@ -70,8 +75,13 @@ services:
       - astro-net
     restart: unless-stopped
     volumes:
-      - ./web/static:/app/web/static
-      - ./web/templates:/app/web/templates
+      - ./web/static:/app/web/static  # Live reload для CSS/JS
+      - ./web/templates:/app/web/templates  # Live reload для HTML
+      - ./web/app.py:/app/web/app.py  # Live reload для Python
+      - ./web/auth.py:/app/web/auth.py
+      - ./web/config.py:/app/web/config.py
+      - ./web/grpc_client.py:/app/web/grpc_client.py
+      - ./web/database_simple.py:/app/web/database_simple.py
 
   # Мониторинг - запускается через profile
   prometheus:
