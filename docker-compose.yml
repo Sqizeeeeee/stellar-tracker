@@ -68,9 +68,12 @@ services:
       - ORBIT_SERVICE_PORT=${ORBIT_SERVICE_PORT:-50052}
       - COLLISION_SERVICE_HOST=${COLLISION_SERVICE_HOST:-collision-service}
       - COLLISION_SERVICE_PORT=${COLLISION_SERVICE_PORT:-50053}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017/}
+      - MONGO_DB_NAME=${MONGO_DB_NAME:-stellartracker}
       - PYTHONUNBUFFERED=1
     depends_on:
       - orchestrator
+      - mongodb
     networks:
       - astro-net
     restart: unless-stopped
@@ -81,7 +84,27 @@ services:
       - ./web/auth.py:/app/web/auth.py
       - ./web/config.py:/app/web/config.py
       - ./web/grpc_client.py:/app/web/grpc_client.py
-      - ./web/database_simple.py:/app/web/database_simple.py
+      - ./web/database.py:/app/web/database.py
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: stellartracker-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-stellartracker_mongo_admin_2024}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - astro-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Мониторинг - запускается через profile
   prometheus:
@@ -198,6 +221,7 @@ volumes:
   prometheus-data:
   grafana-data:
   loki-data:
+  mongodb-data:
 
 networks:
   astro-net:

@@ -1,0 +1,307 @@
+"""
+REST API endpoints для StellarTracker
+"""
+from flask import Blueprint, request, jsonify, current_app
+from flask_login import login_required, current_user
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+import grpc
+import csv
+import io
+from datetime import datetime
+
+from web.proto import astro_pb2
+from web.database import AstroObject, Observation, ProcessingHistory
+from web.grpc_client import grpc_client
+
+api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+@api_bp.route('/process', methods=['POST'])
+@login_required
+def process_observations():
+    """Обработка наблюдений через Orchestrator"""
+    start_time = datetime.now()
+    
+    try:
+        data = request.json
+        request_id = data.get('request_id', f'web-{datetime.now().timestamp()}')
+        
+        # Конвертируем в gRPC формат
+        observations = [
+            astro_pb2.Observation(
+                obs_time=obs['obs_time'],
+                ra_deg=float(obs['ra_deg']),
+                dec_deg=float(obs['dec_deg']),
+                station=obs.get('station', '500'),
+                catalog=obs.get('catalog', 'Gaia2')
+            )
+            for obs in data['observations']
+        ]
+        
+        request_msg = astro_pb2.ObservationsRequest(
+            request_id=request_id,
+            object_name=data['object_name'],
+            observations=observations
+        )
+        
+        # Отправляем в Orchestrator
+        response = grpc_client.orchestrator_stub.Process(request_msg, timeout=30.0)
+        
+        # Вычисляем время обработки
+        processing_time = (datetime.now() - start_time).total_seconds()
+        
+        if response.success:
+            # Сохраняем объект в БД
+            AstroObject.create(
+                object_name=data['object_name'],
+                orbit_data={
+                    'a_au': response.orbit.a_au,
+                    'e': response.orbit.e,
+                    'i_deg': response.orbit.i_deg,
+                    'omega_deg': response.orbit.omega_deg,
+                    'big_omega_deg': response.orbit.big_mega_deg,
+                    'M_deg': response.orbit.M_deg,
+                    'epoch': response.orbit.epoch
+                },
+                risk_data={
+                    'risk_level': response.risk.risk_level,
+                    'moid_earth_au': response.risk.moid_earth_au,
+                    'potential_impact': response.risk.potential_impact,
+                    'closest_approach': response.risk.closest_approach
+                },
+                created_by_email=current_user.email
+            )
+            
+            # Сохраняем наблюдения в БД
+            for obs in data['observations']:
+                Observation.create(
+                    object_name=data['object_name'],
+                    obs_time=obs['obs_time'],
+                    ra_deg=float(obs['ra_deg']),
+                    dec_deg=float(obs['dec_deg']),
+                    station=obs.get('station', '500'),
+                    catalog=obs.get('catalog', 'Gaia2'),
+                    created_by_email=current_user.email
+                )
+            
+            # Сохраняем историю успешной обработки
+            ProcessingHistory.create(
+                request_id=request_id,
+                object_name=data['object_name'],
+                status='success',
+                processing_time=processing_time,
+                created_by_email=current_user.email
+            )
+            
+            # Отправляем real-time обновление через WebSocket
+            from web.app import socketio
+            socketio.emit('new_object', {
+                'object_name': data['object_name'],
+                'risk_level': response.risk.risk_level if response.risk else 'unknown',
+                'moid': response.risk.moid_earth_au if response.risk else None,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            # Сохраняем историю ошибки
+            ProcessingHistory.create(
+                request_id=request_id,
+                object_name=data['object_name'],
+                status='error',
+                error_message=response.error,
+                processing_time=processing_time,
+                created_by_email=current_user.email
+            )
+        
+        return jsonify({
+            'success': response.success,
+            'error': response.error,
+            'orbit': {
+                'a_au': response.orbit.a_au,
+                'e': response.orbit.e,
+                'i_deg': response.orbit.i_deg,
+                'omega_deg': response.orbit.omega_deg,
+                'big_omega_deg': response.orbit.big_mega_deg,
+                'M_deg': response.orbit.M_deg,
+                'epoch': response.orbit.epoch
+            } if response.success and response.orbit else None,
+            'risk': {
+                'risk_level': response.risk.risk_level,
+                'moid_earth_au': response.risk.moid_earth_au,
+                'potential_impact': response.risk.potential_impact,
+                'closest_approach': response.risk.closest_approach
+            } if response.success and response.risk else None
+        })
+        
+    except grpc.RpcError as e:
+        # Сохраняем ошибку gRPC
+        ProcessingHistory.create(
+            request_id=request_id,
+            object_name=data.get('object_name', 'unknown'),
+            status='error',
+            error_message=f'gRPC Error: {e.code()}',
+            processing_time=(datetime.now() - start_time).total_seconds(),
+            created_by_email=current_user.email
+        )
+        return jsonify({'success': False, 'error': f'gRPC Error: {e.code()}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@api_bp.route('/orbit/calculate', methods=['POST'])
+@login_required
+def calculate_orbit():
+    """Расчет орбиты по наблюдениям"""
+    try:
+        data = request.json
+        observations = [
+            astro_pb2.Observation(
+                obs_time=obs['obs_time'],
+                ra_deg=float(obs['ra_deg']),
+                dec_deg=float(obs['dec_deg']),
+                station=obs.get('station', '500'),
+                catalog=obs.get('catalog', 'Gaia2')
+            )
+            for obs in data['observations']
+        ]
+        
+        request_msg = astro_pb2.ObservationsRequest(
+            request_id=data.get('request_id', f'orbit-{datetime.now().timestamp()}'),
+            object_name=data['object_name'],
+            observations=observations
+        )
+        
+        response = grpc_client.orbit_stub.Calculate(request_msg, timeout=15.0)
+        
+        return jsonify({
+            'success': response.success,
+            'error': response.error,
+            'orbit': {
+                'a_au': response.orbit.a_au,
+                'e': response.orbit.e,
+                'i_deg': response.orbit.i_deg,
+                'omega_deg': response.orbit.omega_deg,
+                'big_omega_deg': response.orbit.big_mega_deg,
+                'M_deg': response.orbit.M_deg,
+                'epoch': response.orbit.epoch
+            } if response.success and response.orbit else None
+        })
+        
+    except grpc.RpcError as e:
+        return jsonify({'success': False, 'error': f'gRPC Error: {e.code()}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@api_bp.route('/collision/assess', methods=['POST'])
+@login_required
+def assess_collision():
+    """Оценка риска столкновения"""
+    try:
+        data = request.json
+        orbit = astro_pb2.OrbitElements(
+            a_au=float(data['a_au']),
+            e=float(data['e']),
+            i_deg=float(data['i_deg']),
+            omega_deg=float(data['omega_deg']),
+            big_mega_deg=float(data['big_omega_deg']),
+            M_deg=float(data['M_deg']),
+            epoch=data['epoch']
+        )
+        
+        response = grpc_client.collision_stub.AssessRisk(orbit, timeout=10.0)
+        
+        return jsonify({
+            'success': response.success,
+            'error': response.error,
+            'risk': {
+                'risk_level': response.risk.risk_level,
+                'moid_earth_au': response.risk.moid_earth_au,
+                'potential_impact': response.risk.potential_impact,
+                'closest_approach': response.risk.closest_approach
+            } if response.success and response.risk else None
+        })
+        
+    except grpc.RpcError as e:
+        return jsonify({'success': False, 'error': f'gRPC Error: {e.code()}'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@api_bp.route('/health')
+def health():
+    """Проверка здоровья сервисов"""
+    health_status = {
+        'orchestrator': grpc_client.check_health('orchestrator'),
+        'orbit_service': grpc_client.check_health('orbit_service'),
+        'collision_service': grpc_client.check_health('collision_service')
+    }
+    return jsonify(health_status)
+
+
+@api_bp.route('/metrics')
+def metrics():
+    """Prometheus metrics endpoint"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
+
+@api_bp.route('/parse-csv', methods=['POST'])
+@login_required
+def parse_csv():
+    """Парсинг большого CSV файла на сервере"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+        
+        file = request.files['file']
+        
+        if not file.filename.endswith('.csv'):
+            return jsonify({'success': False, 'error': 'File must be CSV'}), 400
+        
+        # Читаем файл
+        stream = io.StringIO(file.stream.read().decode('UTF8'), newline=None)
+        csv_reader = csv.DictReader(stream)
+        
+        observations = []
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):  # start=2 т.к. строка 1 - header
+            try:
+                obs = {
+                    'obs_time': row['obs_time'].strip(),
+                    'ra_deg': float(row['ra_deg']),
+                    'dec_deg': float(row['dec_deg']),
+                    'station': row.get('station', '500').strip(),
+                    'catalog': row.get('catalog', 'Gaia2').strip()
+                }
+                
+                # Валидация
+                if obs['ra_deg'] < 0 or obs['ra_deg'] > 360:
+                    errors.append(f"Row {row_num}: RA must be 0-360")
+                    continue
+                
+                if obs['dec_deg'] < -90 or obs['dec_deg'] > 90:
+                    errors.append(f"Row {row_num}: Dec must be -90 to 90")
+                    continue
+                
+                observations.append(obs)
+                
+            except KeyError as e:
+                errors.append(f"Row {row_num}: Missing column {e}")
+            except ValueError as e:
+                errors.append(f"Row {row_num}: Invalid number format")
+        
+        if errors and len(observations) == 0:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to parse CSV. Errors: {"; ".join(errors[:5])}'
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'observations': observations,
+            'count': len(observations),
+            'errors': errors if errors else None
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Error parsing CSV: {str(e)}'}), 500

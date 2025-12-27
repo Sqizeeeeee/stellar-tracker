@@ -32,6 +32,9 @@ class Config:
     LOGIN_VIEW = 'auth.login'
     LOGIN_MESSAGE = 'Please log in to access this page.'
     
+    # CSV Upload
+    CSV_CLIENT_PARSE_LIMIT = int(os.getenv('CSV_CLIENT_PARSE_LIMIT', '15'))
+    
     @property
     def orchestrator_address(self):
         return f'{self.ORCHESTRATOR_HOST}:{self.ORCHESTRATOR_PORT}'

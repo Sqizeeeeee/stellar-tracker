@@ -1,188 +1,265 @@
+// Получаем лимит из шаблона
+const CSV_CLIENT_PARSE_LIMIT = parseInt(document.body.dataset.csvLimit) || 15;
+
+let csvData = [];
 let observationCount = 1;
 
-// Add new observation form
-function addObservation() {
-    const container = document.getElementById('observationsContainer');
-    const newIndex = observationCount++;
-    
-    const observationDiv = document.createElement('div');
-    observationDiv.className = 'observation-item';
-    observationDiv.dataset.index = newIndex;
-    
-    observationDiv.innerHTML = `
-        <div class="observation-header">
-            <span class="observation-number">Observation #${newIndex + 1}</span>
-            <button type="button" class="remove-observation" onclick="removeObservation(${newIndex})">×</button>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Time (UTC)</label>
-                <input type="datetime-local" name="obs_time_${newIndex}" required>
-            </div>
-            <div class="form-group">
-                <label>RA (degrees)</label>
-                <input type="number" name="ra_deg_${newIndex}" step="0.000001" required placeholder="0-360">
-            </div>
-            <div class="form-group">
-                <label>Dec (degrees)</label>
-                <input type="number" name="dec_deg_${newIndex}" step="0.000001" required placeholder="-90 to 90">
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Station</label>
-                <input type="text" name="station_${newIndex}" value="500" required>
-            </div>
-            <div class="form-group">
-                <label>Catalog</label>
-                <select name="catalog_${newIndex}" required>
-                    <option value="Gaia2">Gaia DR2</option>
-                    <option value="Gaia3">Gaia DR3</option>
-                    <option value="UCAC4">UCAC4</option>
-                </select>
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(observationDiv);
-}
-
-// Remove observation
-function removeObservation(index) {
-    const item = document.querySelector(`.observation-item[data-index="${index}"]`);
-    if (item && document.querySelectorAll('.observation-item').length > 1) {
-        item.remove();
-    } else {
-        showNotification('Need at least one observation', 'warning');
-    }
-}
-
-// Handle form submission
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('uploadForm');
-    if (!form) return;
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+// Переключение табов
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
         
-        const formData = new FormData(form);
-        const objectName = formData.get('object_name');
+        // Переключаем активные табы
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         
-        // Collect observations
-        const observations = [];
-        const items = document.querySelectorAll('.observation-item');
-        
-        items.forEach((item, idx) => {
-            const index = item.dataset.index || idx;
-            observations.push({
-                obs_time: formData.get(`obs_time_${index}`) + ':00.000Z',
-                ra_deg: parseFloat(formData.get(`ra_deg_${index}`)),
-                dec_deg: parseFloat(formData.get(`dec_deg_${index}`)),
-                station: formData.get(`station_${index}`),
-                catalog: formData.get(`catalog_${index}`)
-            });
-        });
-        
-        if (observations.length < 3) {
-            showNotification('Need at least 3 observations', 'warning');
-            return;
-        }
-        
-        // Show processing status
-        updateStatus('processing', 'Processing observations...');
-        
-        try {
-            const response = await fetch('/api/process', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    object_name: objectName,
-                    observations: observations
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                updateStatus('success', `Successfully processed ${objectName}`);
-                displayResults(result);
-                showNotification(`Object ${objectName} processed successfully!`, 'low');
-            } else {
-                updateStatus('error', `Error: ${result.error}`);
-                showNotification(`Error: ${result.error}`, 'high');
-            }
-        } catch (error) {
-            updateStatus('error', `Network error: ${error.message}`);
-            showNotification('Network error occurred', 'high');
-        }
+        btn.classList.add('active');
+        document.getElementById(`${tab}-tab`).classList.add('active');
     });
 });
 
-// Update processing status
-function updateStatus(type, message) {
-    const statusBox = document.getElementById('processingStatus');
-    if (!statusBox) return;
-    
-    statusBox.className = `status-box ${type}`;
-    statusBox.innerHTML = `<p>${message}</p>`;
+// CSV Upload - Drag & Drop
+const dropzone = document.getElementById('dropzone');
+const csvFileInput = document.getElementById('csvFile');
+
+if (dropzone && csvFileInput) {
+    dropzone.addEventListener('click', () => csvFileInput.click());
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.csv')) {
+            handleCsvFile(file);
+        } else {
+            alert('Please upload a CSV file');
+        }
+    });
+
+    csvFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            handleCsvFile(file);
+        }
+    });
 }
 
-// Display results
-function displayResults(result) {
-    const container = document.getElementById('resultContainer');
-    if (!container) return;
+// Обработка CSV файла
+function handleCsvFile(file) {
+    const reader = new FileReader();
     
-    container.style.display = 'block';
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.trim().split('\n');
+        const rowCount = lines.length - 1; // -1 для header
+        
+        console.log(`CSV file: ${rowCount} observations`);
+        
+        // Проверяем лимит
+        if (rowCount <= CSV_CLIENT_PARSE_LIMIT) {
+            // Маленький файл - парсим на клиенте
+            parseCSVClient(text);
+        } else {
+            // Большой файл - отправляем на сервер
+            parseCSVServer(file);
+        }
+    };
     
-    // Orbit results
-    if (result.orbit) {
-        const orbitDiv = document.getElementById('orbitResults');
-        orbitDiv.innerHTML = `
-            <div class="result-section">
-                <h5>Orbital Elements</h5>
-                <div class="result-item">
-                    <span class="result-label">Semi-major axis (a)</span>
-                    <span class="result-value">${result.orbit.a_au.toFixed(4)} AU</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Eccentricity (e)</span>
-                    <span class="result-value">${result.orbit.e.toFixed(6)}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Inclination (i)</span>
-                    <span class="result-value">${result.orbit.i_deg.toFixed(2)}°</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Arg. of perihelion (ω)</span>
-                    <span class="result-value">${result.orbit.omega_deg.toFixed(2)}°</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Long. of asc. node (Ω)</span>
-                    <span class="result-value">${result.orbit.big_omega_deg.toFixed(2)}°</span>
-                </div>
-            </div>
-        `;
+    reader.readAsText(file);
+}
+
+// Парсинг на клиенте (для маленьких файлов)
+function parseCSVClient(csvText) {
+    console.log('Parsing on client...');
+    
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    
+    csvData = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const obs = {
+            obs_time: values[0],
+            ra_deg: parseFloat(values[1]),
+            dec_deg: parseFloat(values[2]),
+            station: values[3] || '500',
+            catalog: values[4] || 'Gaia2'
+        };
+        csvData.push(obs);
     }
     
-    // Risk results
-    if (result.risk) {
-        const riskDiv = document.getElementById('riskResults');
-        riskDiv.innerHTML = `
-            <div class="result-section">
-                <h5>Risk Assessment</h5>
-                <div class="result-item">
-                    <span class="result-label">Risk Level</span>
-                    <span class="result-value risk-${result.risk.risk_level}">${result.risk.risk_level.toUpperCase()}</span>
+    displayCSVPreview();
+}
+
+// Парсинг на сервере (для больших файлов)
+async function parseCSVServer(file) {
+    console.log('Parsing on server...');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/api/parse-csv', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            csvData = result.observations;
+            displayCSVPreview();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error('Error parsing CSV:', error);
+        alert('Failed to parse CSV file');
+    }
+}
+
+// Отображение preview
+function displayCSVPreview() {
+    const preview = document.getElementById('csvPreview');
+    const table = document.getElementById('csvTable').getElementsByTagName('tbody')[0];
+    const count = document.getElementById('csvCount');
+    const processBtn = document.getElementById('processCsvBtn');
+    
+    // Очищаем таблицу
+    table.innerHTML = '';
+    
+    // Заполняем данными (максимум 100 строк для preview)
+    const displayLimit = Math.min(csvData.length, 100);
+    for (let i = 0; i < displayLimit; i++) {
+        const obs = csvData[i];
+        const row = table.insertRow();
+        
+        row.insertCell(0).textContent = obs.obs_time;
+        row.insertCell(1).textContent = obs.ra_deg.toFixed(4);
+        row.insertCell(2).textContent = obs.dec_deg.toFixed(4);
+        row.insertCell(3).textContent = obs.station;
+        row.insertCell(4).textContent = obs.catalog;
+    }
+    
+    if (csvData.length > 100) {
+        const row = table.insertRow();
+        const cell = row.insertCell(0);
+        cell.colSpan = 5;
+        cell.style.textAlign = 'center';
+        cell.style.color = 'var(--text-secondary)';
+        cell.textContent = `... and ${csvData.length - 100} more observations`;
+    }
+    
+    count.textContent = csvData.length;
+    preview.style.display = 'block';
+    processBtn.disabled = false;
+}
+
+// Clear CSV
+const clearCsvBtn = document.getElementById('clearCsv');
+if (clearCsvBtn) {
+    clearCsvBtn.addEventListener('click', () => {
+        csvData = [];
+        csvFileInput.value = '';
+        document.getElementById('csvPreview').style.display = 'none';
+        document.getElementById('processCsvBtn').disabled = true;
+    });
+}
+
+// Process CSV observations
+const processCsvBtn = document.getElementById('processCsvBtn');
+if (processCsvBtn) {
+    processCsvBtn.addEventListener('click', async () => {
+        const objectName = document.getElementById('csvObjectName').value.trim();
+        
+        if (!objectName) {
+            alert('Please enter object name');
+            return;
+        }
+        
+        if (csvData.length === 0) {
+            alert('No observations to process');
+            return;
+        }
+        
+        await processObservations(objectName, csvData);
+    });
+}
+
+// Обработка наблюдений (общая функция)
+async function processObservations(objectName, observations) {
+    const statusBox = document.getElementById('processingStatus');
+    
+    statusBox.className = 'status-box processing';
+    statusBox.innerHTML = '<p>⏳ Processing observations...</p>';
+    
+    try {
+        const response = await fetch('/api/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                object_name: objectName,
+                observations: observations
+            })
+        });
+        
+        const result = await response.json();
+        
+        console.log('API Response:', result);
+        
+        if (result.success && result.orbit && result.risk) {
+            statusBox.className = 'status-box success';
+            statusBox.innerHTML = `
+                <h3>✅ Success!</h3>
+                <div class="result-container">
+                    <div class="result-section">
+                        <h5>Orbit Elements</h5>
+                        <div class="result-item">
+                            <span class="result-label">Semi-major axis:</span>
+                            <span class="result-value">${result.orbit.a_au.toFixed(4)} AU</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Eccentricity:</span>
+                            <span class="result-value">${result.orbit.e.toFixed(4)}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Inclination:</span>
+                            <span class="result-value">${result.orbit.i_deg.toFixed(2)}°</span>
+                        </div>
+                    </div>
+                    <div class="result-section">
+                        <h5>Risk Assessment</h5>
+                        <div class="result-item">
+                            <span class="result-label">Risk Level:</span>
+                            <span class="result-value">${result.risk.risk_level.toUpperCase()}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">MOID:</span>
+                            <span class="result-value">${result.risk.moid_earth_au.toFixed(6)} AU</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="result-item">
-                    <span class="result-label">MOID (Earth)</span>
-                    <span class="result-value">${result.risk.moid_earth_au.toFixed(6)} AU</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Potential Impact</span>
-                    <span class="result-value">${result.risk.potential_impact ? 'Yes ⚠️' : 'No ✓'}</span>
-                </div>
-            </div>
-        `;
+            `;
+        } else {
+            statusBox.className = 'status-box error';
+            statusBox.innerHTML = `<h3>❌ Error</h3><p>${result.error || 'No orbit data returned'}</p>`;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        statusBox.className = 'status-box error';
+        statusBox.innerHTML = `<h3>❌ Error</h3><p>Failed to process observations: ${error.message}</p>`;
     }
 }

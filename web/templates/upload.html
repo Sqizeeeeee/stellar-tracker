@@ -6,88 +6,135 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
 {% endblock %}
 
-{% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
-{% endblock %}
-
 {% block content %}
+<body data-csv-limit="{{ csv_limit }}">
 <div class="upload-page">
     <h2 class="page-title">Upload Observations</h2>
     
-    <div class="upload-grid">
-        <div class="panel">
-            <h3>Manual Entry</h3>
-            <form id="uploadForm">
-                <div class="form-group">
-                    <label for="objectName">Object Name</label>
-                    <input type="text" id="objectName" name="object_name" required 
-                           placeholder="e.g., 2024 XY1">
+    <div class="upload-container">
+        <div class="upload-form-section">
+            <div class="panel">
+                <h2>Upload Observations</h2>
+                
+                <!-- Табы -->
+                <div class="input-tabs">
+                    <button class="tab-btn active" data-tab="manual">Manual Input</button>
+                    <button class="tab-btn" data-tab="csv">Upload CSV</button>
                 </div>
-
-                <div class="observations-container" id="observationsContainer">
-                    <h4>Observations (minimum 3)</h4>
-                    <div class="observation-item" data-index="0">
-                        <div class="observation-header">
-                            <span class="observation-number">Observation #1</span>
+                
+                <!-- Ручной ввод -->
+                <div id="manual-tab" class="tab-content active">
+                    <form id="uploadForm">
+                        <div class="form-group">
+                            <label for="objectName">Object Name</label>
+                            <input type="text" id="objectName" name="object_name" required 
+                                   placeholder="e.g., 2024AA1">
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Time (UTC)</label>
-                                <input type="datetime-local" name="obs_time_0" required>
-                            </div>
-                            <div class="form-group">
-                                <label>RA (degrees)</label>
-                                <input type="number" name="ra_deg_0" step="0.000001" required 
-                                       placeholder="0-360">
-                            </div>
-                            <div class="form-group">
-                                <label>Dec (degrees)</label>
-                                <input type="number" name="dec_deg_0" step="0.000001" required 
-                                       placeholder="-90 to 90">
+                        
+                        <div id="observationsContainer">
+                            <div class="observation-item">
+                                <h4>Observation #1</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Time (UTC)</label>
+                                        <input type="datetime-local" name="obs_time_0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>RA (degrees)</label>
+                                        <input type="number" name="ra_deg_0" step="0.000001" required 
+                                               placeholder="0-360">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Dec (degrees)</label>
+                                        <input type="number" name="dec_deg_0" step="0.000001" required 
+                                               placeholder="-90 to 90">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Station</label>
+                                        <input type="text" name="station_0" value="500" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Catalog</label>
+                                        <select name="catalog_0" required>
+                                            <option value="Gaia2">Gaia DR2</option>
+                                            <option value="Gaia3">Gaia DR3</option>
+                                            <option value="UCAC4">UCAC4</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Station</label>
-                                <input type="text" name="station_0" value="500" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Catalog</label>
-                                <select name="catalog_0" required>
-                                    <option value="Gaia2">Gaia DR2</option>
-                                    <option value="Gaia3">Gaia DR3</option>
-                                    <option value="UCAC4">UCAC4</option>
-                                </select>
-                            </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="addObservation">
+                                + Add Observation
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="processBtn">
+                                🚀 Process Observations
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- CSV загрузка -->
+                <div id="csv-tab" class="tab-content">
+                    <div class="form-group">
+                        <label for="csvObjectName">Object Name</label>
+                        <input type="text" id="csvObjectName" required 
+                               placeholder="e.g., 2024AA1">
+                    </div>
+                    
+                    <div class="csv-upload-area">
+                        <input type="file" id="csvFile" accept=".csv" hidden>
+                        <div class="upload-dropzone" id="dropzone">
+                            <div class="upload-icon">📄</div>
+                            <p>Drag & drop CSV file here or click to browse</p>
+                            <small>Format: obs_time,ra_deg,dec_deg,station,catalog</small>
                         </div>
                     </div>
+                    
+                    <div id="csvPreview" class="csv-preview" style="display:none;">
+                        <h4>Preview (<span id="csvCount">0</span> observations)</h4>
+                        <div class="csv-table-container">
+                            <table id="csvTable" class="csv-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>RA (deg)</th>
+                                        <th>Dec (deg)</th>
+                                        <th>Station</th>
+                                        <th>Catalog</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="clearCsv">
+                            Clear
+                        </button>
+                        <button type="button" class="btn btn-primary" id="processCsvBtn" disabled>
+                            🚀 Process Observations
+                        </button>
+                    </div>
                 </div>
-
-                <button type="button" class="btn btn-secondary" onclick="addObservation()">
-                    ➕ Add Observation
-                </button>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        🚀 Process Observations
-                    </button>
-                    <button type="reset" class="btn btn-secondary">Clear</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="panel">
-            <h3>Processing Status</h3>
-            <div id="processingStatus" class="status-box">
-                <p class="empty-state">Ready to process observations</p>
             </div>
-
-            <div id="resultContainer" class="result-container" style="display: none;">
-                <h4>Results</h4>
-                <div id="orbitResults"></div>
-                <div id="riskResults"></div>
+        </div>
+        
+        <div class="upload-status-section">
+            <div class="panel">
+                <h3>Processing Status</h3>
+                <div id="processingStatus" class="status-box">
+                    <p class="empty-state">Ready to process observations</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
 {% endblock %}

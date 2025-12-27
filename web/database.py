@@ -1,19 +1,46 @@
 """
-MongoDB database configuration and User model
+MongoDB database models for StellarTracker
 """
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 from flask_login import UserMixin
 import bcrypt
 from datetime import datetime
+import os
+
 
 # MongoDB connection
-client = MongoClient('mongodb://localhost:27017/')
-db = client['stellartracker']
-users_collection = db['users']
+MONGO_URI = os.getenv('MONGO_URI', 'mongodb://mongodb:27017/')
+MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'stellartracker')
 
-# Create indexes
-users_collection.create_index('email', unique=True)
-users_collection.create_index('username', unique=True)
+client = MongoClient(MONGO_URI)
+db = client[MONGO_DB_NAME]
+
+# Collections
+users_collection = db.users
+objects_collection = db.objects
+observations_collection = db.observations
+history_collection = db.processing_history
+
+
+def init_db():
+    """Initialize database with indexes"""
+    # Users indexes
+    users_collection.create_index([('email', ASCENDING)], unique=True)
+    
+    # Objects indexes
+    objects_collection.create_index([('object_name', ASCENDING)], unique=True)
+    objects_collection.create_index([('created_at', DESCENDING)])
+    objects_collection.create_index([('risk.risk_level', ASCENDING)])
+    
+    # Observations indexes
+    observations_collection.create_index([('object_name', ASCENDING)])
+    observations_collection.create_index([('created_at', DESCENDING)])
+    
+    # History indexes
+    history_collection.create_index([('created_at', DESCENDING)])
+    history_collection.create_index([('object_name', ASCENDING)])
+    
+    print("✅ Database indexes created")
 
 
 class User(UserMixin):
@@ -24,12 +51,12 @@ class User(UserMixin):
         self.email = user_data['email']
         self.username = user_data['username']
         self.created_at = user_data.get('created_at')
+        self.last_login = user_data.get('last_login')
         self.role = user_data.get('role', 'user')
     
     @staticmethod
     def create_user(email, username, password):
-        """Create new user in database"""
-        # Hash password
+        """Create new user"""
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         
         user_data = {
@@ -37,15 +64,17 @@ class User(UserMixin):
             'username': username,
             'password_hash': password_hash,
             'created_at': datetime.utcnow(),
+            'last_login': None,
             'role': 'user'
         }
         
         try:
             result = users_collection.insert_one(user_data)
             user_data['_id'] = result.inserted_id
+            print(f"✅ Created user: {username} ({email})")
             return User(user_data)
         except Exception as e:
-            print(f"Error creating user: {e}")
+            print(f"❌ Error creating user: {e}")
             return None
     
     @staticmethod
@@ -58,8 +87,11 @@ class User(UserMixin):
     def find_by_id(user_id):
         """Find user by ID"""
         from bson.objectid import ObjectId
-        user_data = users_collection.find_one({'_id': ObjectId(user_id)})
-        return User(user_data) if user_data else None
+        try:
+            user_data = users_collection.find_one({'_id': ObjectId(user_id)})
+            return User(user_data) if user_data else None
+        except:
+            return None
     
     @staticmethod
     def verify_password(email, password):
@@ -69,5 +101,146 @@ class User(UserMixin):
             return None
         
         if bcrypt.checkpw(password.encode('utf-8'), user_data['password_hash']):
+            # Update last login
+            users_collection.update_one(
+                {'_id': user_data['_id']},
+                {'$set': {'last_login': datetime.utcnow()}}
+            )
             return User(user_data)
         return None
+
+
+class AstroObject:
+    """Модель астероида/объекта"""
+    
+    @staticmethod
+    def create(object_name, orbit_data, risk_data, created_by_email):
+        """Создать или обновить объект"""
+        obj_data = {
+            'object_name': object_name,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow(),
+            'created_by': created_by_email,
+            'observations_count': 0,
+            'orbit': orbit_data,
+            'risk': risk_data
+        }
+        
+        try:
+            # Upsert - создать или обновить
+            result = objects_collection.update_one(
+                {'object_name': object_name},
+                {'$set': obj_data, '$setOnInsert': {'created_at': datetime.utcnow()}},
+                upsert=True
+            )
+            print(f"✅ Object saved: {object_name}")
+            return obj_data
+        except Exception as e:
+            print(f"❌ Error saving object: {e}")
+            return None
+    
+    @staticmethod
+    def find_by_name(object_name):
+        """Найти объект по имени"""
+        return objects_collection.find_one({'object_name': object_name})
+    
+    @staticmethod
+    def find_all(limit=100, risk_level=None):
+        """Получить все объекты с фильтрацией"""
+        query = {}
+        if risk_level:
+            query['risk.risk_level'] = risk_level
+        
+        return list(objects_collection.find(query).sort('created_at', DESCENDING).limit(limit))
+    
+    @staticmethod
+    def increment_observations(object_name):
+        """Увеличить счетчик наблюдений"""
+        objects_collection.update_one(
+            {'object_name': object_name},
+            {'$inc': {'observations_count': 1}}
+        )
+
+
+class Observation:
+    """Модель наблюдения"""
+    
+    @staticmethod
+    def create(object_name, obs_time, ra_deg, dec_deg, station, catalog, created_by_email):
+        """Создать наблюдение"""
+        obs_data = {
+            'object_name': object_name,
+            'obs_time': obs_time,
+            'ra_deg': ra_deg,
+            'dec_deg': dec_deg,
+            'station': station,
+            'catalog': catalog,
+            'created_at': datetime.utcnow(),
+            'created_by': created_by_email
+        }
+        
+        try:
+            result = observations_collection.insert_one(obs_data)
+            AstroObject.increment_observations(object_name)
+            print(f"✅ Observation saved for {object_name}")
+            return obs_data
+        except Exception as e:
+            print(f"❌ Error saving observation: {e}")
+            return None
+    
+    @staticmethod
+    def find_by_object(object_name, limit=100):
+        """Получить наблюдения объекта"""
+        return list(observations_collection.find(
+            {'object_name': object_name}
+        ).sort('created_at', DESCENDING).limit(limit))
+    
+    @staticmethod
+    def find_by_user(user_email, limit=100):
+        """Получить наблюдения пользователя"""
+        return list(observations_collection.find(
+            {'created_by': user_email}
+        ).sort('created_at', DESCENDING).limit(limit))
+
+
+class ProcessingHistory:
+    """Модель истории обработки"""
+    
+    @staticmethod
+    def create(request_id, object_name, status, error_message=None, processing_time=0, created_by_email=None):
+        """Создать запись истории"""
+        history_data = {
+            'request_id': request_id,
+            'object_name': object_name,
+            'status': status,
+            'error_message': error_message,
+            'processing_time': processing_time,
+            'created_at': datetime.utcnow(),
+            'created_by': created_by_email
+        }
+        
+        try:
+            result = history_collection.insert_one(history_data)
+            return history_data
+        except Exception as e:
+            print(f"❌ Error saving history: {e}")
+            return None
+    
+    @staticmethod
+    def find_recent(limit=50):
+        """Получить последнюю историю"""
+        return list(history_collection.find().sort('created_at', DESCENDING).limit(limit))
+    
+    @staticmethod
+    def find_by_user(user_email, limit=50):
+        """Получить историю пользователя"""
+        return list(history_collection.find(
+            {'created_by': user_email}
+        ).sort('created_at', DESCENDING).limit(limit))
+
+
+# Initialize database on import
+try:
+    init_db()
+except Exception as e:
+    print(f"⚠️  Database initialization: {e}")
