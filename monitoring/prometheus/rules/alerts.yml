@@ -1,63 +1,120 @@
 groups:
-  - name: stellartracker_alerts
+  - name: stellartracker_critical
     interval: 30s
     rules:
-      # Высокое использование CPU
-      - alert: HighCPUUsage
-        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High CPU usage detected"
-          description: "{{ $labels.service }} CPU usage is above 80% (current: {{ $value }}%)"
-
-      # Высокое использование памяти
-      - alert: HighMemoryUsage
-        expr: (process_resident_memory_bytes / 1024 / 1024) > 1024
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High memory usage"
-          description: "{{ $labels.service }} memory usage is above 1GB (current: {{ $value }}MB)"
-
-      # Сервис недоступен
+      # 🔴 CRITICAL: Сервис недоступен
       - alert: ServiceDown
         expr: up == 0
         for: 1m
         labels:
           severity: critical
+          team: devops
         annotations:
-          summary: "Service is down"
-          description: "{{ $labels.job }} has been down for more than 1 minute"
+          summary: "🔴 Service {{ $labels.job }} is DOWN"
+          description: "Service {{ $labels.job }} ({{ $labels.instance }}) has been down for more than 1 minute."
+          dashboard: "http://localhost:3000/d/stellartracker-mission-control"
 
-      # Высокая частота ошибок HTTP
+      # 🔴 CRITICAL: Критическое использование памяти
+      - alert: CriticalMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 2048
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "🔴 Critical memory usage on {{ $labels.service }}"
+          description: "Memory usage is {{ $value }}MB (threshold: 2048MB)"
+
+      # 🔴 CRITICAL: Диск почти заполнен
+      - alert: DiskSpaceCritical
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "🔴 Disk space critical"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 90%)"
+
+  - name: stellartracker_warnings
+    interval: 30s
+    rules:
+      # ⚠️ WARNING: Высокое использование CPU
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "⚠️ High CPU usage on {{ $labels.job }}"
+          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%)"
+
+      # ⚠️ WARNING: Высокое использование памяти
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 1024
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "⚠️ High memory usage on {{ $labels.service }}"
+          description: "Memory usage is {{ $value }}MB (threshold: 1024MB)"
+
+      # ⚠️ WARNING: Диск заполнен > 70%
+      - alert: DiskSpaceWarning
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 70
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "⚠️ Disk space warning"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 70%)"
+
+      # ⚠️ WARNING: Высокая частота ошибок
       - alert: HighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        expr: rate(process_requests_failed[5m]) / rate(process_requests_total[5m]) > 0.05
         for: 5m
         labels:
           severity: warning
+          team: backend
         annotations:
-          summary: "High HTTP error rate"
-          description: "{{ $labels.service }} error rate is above 5% (current: {{ $value }})"
+          summary: "⚠️ High error rate on {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
 
-      # Медленные ответы API
-      - alert: SlowAPIResponse
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+      # ⚠️ WARNING: Медленные ответы
+      - alert: SlowResponseTime
+        expr: rate(process_requests_total[1m]) > 0 and histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
         for: 5m
         labels:
           severity: warning
+          team: backend
         annotations:
-          summary: "Slow API responses"
-          description: "{{ $labels.service }} 95th percentile response time is above 1s (current: {{ $value }}s)"
+          summary: "⚠️ Slow response time on {{ $labels.service }}"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s)"
 
-      # Collision detection проблемы
-      - alert: HighCollisionDetectionTime
-        expr: collision_detection_duration_seconds > 2
-        for: 3m
+  - name: stellartracker_business
+    interval: 1m
+    rules:
+      # 📊 BUSINESS: Много high-risk объектов
+      - alert: HighRiskObjectsDetected
+        expr: increase(high_risk_detections_total[1h]) > 5
+        for: 5m
         labels:
           severity: warning
+          team: science
         annotations:
-          summary: "Slow collision detection"
-          description: "Collision detection taking too long (current: {{ $value }}s)"
+          summary: "⚠️ High number of high-risk objects detected"
+          description: "{{ $value }} high-risk objects detected in the last hour"
+
+      # 📊 BUSINESS: Нет обработки запросов
+      - alert: NoProcessingActivity
+        expr: rate(process_requests_total[10m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "⚠️ No processing activity"
+          description: "No requests processed in the last 30 minutes"

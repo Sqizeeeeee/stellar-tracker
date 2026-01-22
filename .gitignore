@@ -1,101 +1,57 @@
-# === Python ===
+# Environment files - НЕ коммитить в git
+.env
+.env.local
+.env.production
+.env.staging
+*.local.env
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyo
-*.pyd
-*.pyw
-*.egg-info/
-dist/
+*.so
+.Python
 build/
-*.egg
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
 .coverage
 htmlcov/
-.tox/
-.nox/
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
-.pyre/
-.pytype/
-.ruff_cache/
+*.cover
 .hypothesis/
 
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
-env.bak/
-venv.bak/
+# Docker
+*.log
 
-# === CLI utilities (local only) ===
-web/cli.py
-cli.py
+# Backups
+backups/
 
-# === Build & CMake ===
-build/
-*/build/
-cmake-build-*/
-CMakeFiles/
-CMakeCache.txt
-CMakeScripts/
-cmake_install.cmake
-install_manifest.txt
-*.cmake
-*.cbp
-*.ninja_deps
-*.ninja_log
-
-# === vcpkg ===
-vcpkg.json
-.vcppkg/
-vcpkg/
-installed/
-downloads/
-
-# === Docker ===
-.docker/
-*.docker
-
-# === IDE & Editors ===
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
 Thumbs.db
-Desktop.ini
 
-# === Logs & temp ===
-*.log
-*.tmp
-*.bak
-*.cache
-
-# === Local env ===
-.env
-.env.example
-.env.local
-.local/
-
-# === macOS ===
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-
-
-
-orekit-lib/
+# Secrets
+*.pem
+*.key
+ssh_keys/

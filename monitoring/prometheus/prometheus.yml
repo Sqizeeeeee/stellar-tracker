@@ -5,11 +5,12 @@ global:
     cluster: 'stellartracker'
     environment: 'production'
 
-# Alertmanager configuration (опционально)
+# Alertmanager configuration
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: []
+        - targets: ['alertmanager:9093']  # ИСПРАВЛЕНО: добавлен реальный target
+      timeout: 10s
 
 # Правила алертинга
 rule_files:

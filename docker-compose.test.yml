@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  web-test:
+    build:
+      context: ./web
+      target: test
+    environment:
+      - FLASK_ENV=testing
+      - MONGODB_URI=mongodb://test:test@mongodb-test:27017/test?authSource=admin
+    depends_on:
+      - mongodb-test
+    command: pytest tests/ -v --cov=. --cov-report=xml
+
+  orchestrator-test:
+    build:
+      context: ./orchestrator
+      target: test
+    environment:
+      - MONGODB_URI=mongodb://test:test@mongodb-test:27017/test?authSource=admin
+    depends_on:
+      - mongodb-test
+    command: ctest --output-on-failure
+
+  mongodb-test:
+    image: mongo:7
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=test
+      - MONGO_INITDB_ROOT_PASSWORD=test
+      - MONGO_INITDB_DATABASE=test
+    tmpfs:
+      - /data/db
+      - /data/configdb

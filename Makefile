@@ -127,3 +127,60 @@ proto-gen:
 	@echo "→ Web (Python)..."
 	python -m grpc_tools.protoc -I./proto --python_out=./web/proto --grpc_python_out=./web/proto ./proto/astro.proto
 	@echo "✅ Proto files regenerated!"
+
+# CI/CD Commands
+ci-test:
+	@echo "🧪 Running CI tests..."
+	@docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+	@docker-compose -f docker-compose.test.yml down
+
+ci-build:
+	@echo "🏗️  Building images for CI..."
+	docker-compose build --parallel
+
+ci-lint:
+	@echo "🔍 Running linters..."
+	@docker-compose run --rm web ruff check .
+	@docker-compose run --rm web bandit -r . -f json
+
+deploy-staging:
+	@echo "🚀 Deploying to staging..."
+	@docker-compose -f docker-compose.prod.yml pull
+	@docker-compose -f docker-compose.prod.yml up -d
+	@make health
+
+deploy-production:
+	@echo "🚀 Deploying to production..."
+	@read -p "Are you sure you want to deploy to production? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker-compose -f docker-compose.prod.yml pull; \
+		docker-compose -f docker-compose.prod.yml up -d --no-deps --build; \
+		make health; \
+	fi
+
+rollback:
+	@echo "⏪ Rolling back to previous version..."
+	@docker-compose -f docker-compose.prod.yml down
+	@git checkout HEAD~1
+	@docker-compose -f docker-compose.prod.yml up -d
+	@make health
+
+backup-db:
+	@echo "💾 Backing up database..."
+	@mkdir -p backups
+	@docker-compose exec -T mongodb mongodump --authenticationDatabase admin -u admin -p stellartracker_mongo_admin_2024 --db stellartracker --archive > backups/db_backup_$$(date +%Y%m%d_%H%M%S).archive
+	@echo "✅ Backup complete!"
+
+restore-db:
+	@echo "📥 Restoring database..."
+	@read -p "Enter backup file path: " backup_file; \
+	docker-compose exec -T mongodb mongorestore --authenticationDatabase admin -u admin -p stellartracker_mongo_admin_2024 --archive < $$backup_file
+	@echo "✅ Restore complete!"
+
+logs-prod:
+	@docker-compose -f docker-compose.prod.yml logs -f
+
+scale-web:
+	@read -p "Number of web instances: " count; \
+	docker-compose -f docker-compose.prod.yml up -d --scale web=$$count

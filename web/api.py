@@ -3,7 +3,7 @@ REST API endpoints для StellarTracker
 """
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter, Histogram
 import grpc
 import csv
 import io
@@ -14,7 +14,89 @@ from web.proto import astro_pb2
 from web.database import AstroObject, Observation, ProcessingHistory
 from web.grpc_client import grpc_client
 
+# Prometheus метрики для пользовательских событий
+USER_EVENTS = Counter(
+    'user_events_total', 
+    'User frontend events', 
+    ['event_name', 'user']
+)
+
+CSV_PARSE_OPERATIONS = Counter(
+    'csv_parse_operations_total', 
+    'CSV parse operations', 
+    ['method', 'status']
+)
+
+CSV_PARSE_DURATION = Histogram(
+    'csv_parse_duration_seconds', 
+    'CSV parse duration', 
+    ['method'],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+)
+
+PROCESSING_OPERATIONS = Counter(
+    'processing_operations_total', 
+    'Processing operations', 
+    ['status']
+)
+
+PROCESSING_DURATION = Histogram(
+    'processing_duration_seconds', 
+    'Processing duration',
+    buckets=(0.1, 0.5, 1, 2, 5, 10, 30, 60)
+)
+
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+@api_bp.route('/metrics/event', methods=['POST'])
+def log_metric_event():
+    """Логирование событий с фронтенда для аналитики"""
+    try:
+        data = request.json
+        event_name = data.get('event')
+        
+        user_email = 'anonymous'
+        if current_user and current_user.is_authenticated:
+            user_email = current_user.email
+        
+        if not event_name:
+            return jsonify({'success': False, 'error': 'event name required'}), 400
+        
+        USER_EVENTS.labels(event_name=event_name, user=user_email).inc()
+        
+        if event_name == 'csv_parsed_client':
+            CSV_PARSE_OPERATIONS.labels(method='client', status='success').inc()
+            parse_time = data.get('parseTime', 0) / 1000.0
+            if parse_time > 0:
+                CSV_PARSE_DURATION.labels(method='client').observe(parse_time)
+        
+        elif event_name == 'csv_parsed_server':
+            status = 'error' if data.get('hasErrors') else 'success'
+            CSV_PARSE_OPERATIONS.labels(method='server', status=status).inc()
+            parse_time = data.get('parseTime', 0) / 1000.0
+            if parse_time > 0:
+                CSV_PARSE_DURATION.labels(method='server').observe(parse_time)
+        
+        elif event_name == 'csv_parse_error':
+            CSV_PARSE_OPERATIONS.labels(method='unknown', status='error').inc()
+        
+        elif event_name == 'processing_success':
+            PROCESSING_OPERATIONS.labels(status='success').inc()
+            proc_time = data.get('processingTime', 0) / 1000.0
+            if proc_time > 0:
+                PROCESSING_DURATION.observe(proc_time)
+        
+        elif event_name in ['processing_failed', 'processing_error']:
+            PROCESSING_OPERATIONS.labels(status='failed').inc()
+        
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        print(f"❌ Error logging metric event: {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @api_bp.route('/process', methods=['POST'])

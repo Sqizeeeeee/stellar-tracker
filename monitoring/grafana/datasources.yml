@@ -10,6 +10,11 @@ datasources:
     version: 1
     jsonData:
       timeInterval: "15s"
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+      cacheLevel: 'High'
 
   - name: Loki
     type: loki
@@ -19,3 +24,18 @@ datasources:
     version: 1
     jsonData:
       maxLines: 1000
+      derivedFields:
+        - datasourceUid: prometheus
+          matcherRegex: "traceID=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+
+  - name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    editable: true
+    version: 1
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: true

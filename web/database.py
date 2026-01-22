@@ -6,6 +6,7 @@ from flask_login import UserMixin
 import bcrypt
 from datetime import datetime
 import os
+from prometheus_client import Counter, Histogram
 
 
 # MongoDB connection
@@ -20,6 +21,13 @@ users_collection = db.users
 objects_collection = db.objects
 observations_collection = db.observations
 history_collection = db.processing_history
+
+
+# Business метрики
+OBJECTS_CREATED = Counter('objects_created_total', 'Total objects created')
+OBSERVATIONS_SAVED = Counter('observations_saved_total', 'Total observations saved', ['object_name'])
+DB_OPERATIONS = Counter('mongodb_operations_total', 'MongoDB operations', ['collection', 'operation'])
+DB_OPERATION_DURATION = Histogram('mongodb_operation_duration_seconds', 'MongoDB operation duration', ['collection', 'operation'])
 
 
 def init_db():
@@ -142,6 +150,9 @@ class AstroObject:
     @staticmethod
     def create(object_name, orbit_data, risk_data, created_by_email):
         """Создать или обновить объект"""
+        import time
+        start_time = time.time()
+        
         obj_data = {
             'object_name': object_name,
             'updated_at': datetime.utcnow(),
@@ -163,6 +174,15 @@ class AstroObject:
                 },
                 upsert=True
             )
+            
+            # ДОБАВЛЕНО: метрики
+            duration = time.time() - start_time
+            DB_OPERATIONS.labels(collection='objects', operation='upsert').inc()
+            DB_OPERATION_DURATION.labels(collection='objects', operation='upsert').observe(duration)
+            
+            if result.upserted_id:
+                OBJECTS_CREATED.inc()
+            
             print(f"✅ Object saved: {object_name} (matched={result.matched_count}, modified={result.modified_count}, upserted={result.upserted_id is not None})")
             return obj_data
         except Exception as e:
@@ -250,6 +270,9 @@ class Observation:
     @staticmethod
     def create(object_name, obs_time, ra_deg, dec_deg, station, catalog, created_by_email):
         """Создать наблюдение"""
+        import time
+        start_time = time.time()
+        
         obs_data = {
             'object_name': object_name,
             'obs_time': obs_time,
@@ -264,25 +287,18 @@ class Observation:
         try:
             result = observations_collection.insert_one(obs_data)
             AstroObject.increment_observations(object_name)
+            
+            
+            duration = time.time() - start_time
+            DB_OPERATIONS.labels(collection='observations', operation='insert').inc()
+            DB_OPERATION_DURATION.labels(collection='observations', operation='insert').observe(duration)
+            OBSERVATIONS_SAVED.labels(object_name=object_name).inc()
+            
             print(f"✅ Observation saved for {object_name}")
             return obs_data
         except Exception as e:
             print(f"❌ Error saving observation: {e}")
             return None
-    
-    @staticmethod
-    def find_by_object(object_name, limit=100):
-        """Получить наблюдения объекта"""
-        return list(observations_collection.find(
-            {'object_name': object_name}
-        ).sort('created_at', DESCENDING).limit(limit))
-    
-    @staticmethod
-    def find_by_user(user_email, limit=100):
-        """Получить наблюдения пользователя"""
-        return list(observations_collection.find(
-            {'created_by': user_email}
-        ).sort('created_at', DESCENDING).limit(limit))
 
 
 class ProcessingHistory:

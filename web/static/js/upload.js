@@ -4,10 +4,33 @@ const CSV_CLIENT_PARSE_LIMIT = parseInt(document.body.dataset.csvLimit) || 15;
 let csvData = [];
 let observationCount = 1;
 
+
+async function sendMetric(eventName, eventData = {}) {
+    try {
+        // Отправляем событие на backend для логирования
+        await fetch('/api/metrics/event', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                event: eventName,
+                timestamp: new Date().toISOString(),
+                ...eventData
+            })
+        });
+    } catch (error) {
+        console.warn('Failed to send metric:', error);
+    }
+}
+
 // Переключение табов
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
+        
+
+        sendMetric('tab_switched', { tab: tab });
         
         // Переключаем активные табы
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -23,7 +46,10 @@ const dropzone = document.getElementById('dropzone');
 const csvFileInput = document.getElementById('csvFile');
 
 if (dropzone && csvFileInput) {
-    dropzone.addEventListener('click', () => csvFileInput.click());
+    dropzone.addEventListener('click', () => {
+        sendMetric('dropzone_clicked');
+        csvFileInput.click();
+    });
 
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -40,8 +66,10 @@ if (dropzone && csvFileInput) {
         
         const file = e.dataTransfer.files[0];
         if (file && file.name.endsWith('.csv')) {
+            sendMetric('file_dropped', { fileName: file.name, fileSize: file.size });
             handleCsvFile(file);
         } else {
+            sendMetric('invalid_file_dropped', { fileName: file?.name });
             alert('Please upload a CSV file');
         }
     });
@@ -49,6 +77,7 @@ if (dropzone && csvFileInput) {
     csvFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+            sendMetric('file_selected', { fileName: file.name, fileSize: file.size });
             handleCsvFile(file);
         }
     });
@@ -64,6 +93,12 @@ function handleCsvFile(file) {
         const rowCount = lines.length - 1; // -1 для header
         
         console.log(`CSV file: ${rowCount} observations`);
+        
+
+        sendMetric('csv_file_loaded', { 
+            observations: rowCount,
+            parseMethod: rowCount <= CSV_CLIENT_PARSE_LIMIT ? 'client' : 'server'
+        });
         
         // Проверяем лимит
         if (rowCount <= CSV_CLIENT_PARSE_LIMIT) {
@@ -81,6 +116,7 @@ function handleCsvFile(file) {
 // Парсинг на клиенте (для маленьких файлов)
 function parseCSVClient(csvText) {
     console.log('Parsing on client...');
+    const startTime = performance.now();
     
     const lines = csvText.trim().split('\n');
     const headers = lines[0].split(',').map(h => h.trim());
@@ -99,12 +135,21 @@ function parseCSVClient(csvText) {
         csvData.push(obs);
     }
     
+    const parseTime = performance.now() - startTime;
+    
+
+    sendMetric('csv_parsed_client', {
+        observations: csvData.length,
+        parseTime: parseTime
+    });
+    
     displayCSVPreview();
 }
 
 // Парсинг на сервере (для больших файлов)
 async function parseCSVServer(file) {
     console.log('Parsing on server...');
+    const startTime = performance.now();
     
     const formData = new FormData();
     formData.append('file', file);
@@ -116,14 +161,25 @@ async function parseCSVServer(file) {
         });
         
         const result = await response.json();
+        const parseTime = performance.now() - startTime;
         
         if (result.success) {
             csvData = result.observations;
+            
+
+            sendMetric('csv_parsed_server', {
+                observations: csvData.length,
+                parseTime: parseTime,
+                hasErrors: result.errors?.length > 0
+            });
+            
             displayCSVPreview();
         } else {
+            sendMetric('csv_parse_error', { error: result.error });
             alert(`Error: ${result.error}`);
         }
     } catch (error) {
+        sendMetric('csv_parse_error', { error: error.message });
         console.error('Error parsing CSV:', error);
         alert('Failed to parse CSV file');
     }
@@ -170,6 +226,7 @@ function displayCSVPreview() {
 const clearCsvBtn = document.getElementById('clearCsv');
 if (clearCsvBtn) {
     clearCsvBtn.addEventListener('click', () => {
+        sendMetric('csv_cleared', { observations: csvData.length });
         csvData = [];
         csvFileInput.value = '';
         document.getElementById('csvPreview').style.display = 'none';
@@ -184,14 +241,21 @@ if (processCsvBtn) {
         const objectName = document.getElementById('csvObjectName').value.trim();
         
         if (!objectName) {
+            sendMetric('process_failed', { reason: 'no_object_name' });
             alert('Please enter object name');
             return;
         }
         
         if (csvData.length === 0) {
+            sendMetric('process_failed', { reason: 'no_observations' });
             alert('No observations to process');
             return;
         }
+        
+        sendMetric('processing_started', {
+            objectName: objectName,
+            observations: csvData.length
+        });
         
         await processObservations(objectName, csvData);
     });
@@ -200,6 +264,7 @@ if (processCsvBtn) {
 // Обработка наблюдений (общая функция)
 async function processObservations(objectName, observations) {
     const statusBox = document.getElementById('processingStatus');
+    const startTime = performance.now();
     
     statusBox.className = 'status-box processing';
     statusBox.innerHTML = '<p>⏳ Processing observations...</p>';
@@ -217,6 +282,7 @@ async function processObservations(objectName, observations) {
         });
         
         const result = await response.json();
+        const processingTime = performance.now() - startTime;
         
         console.log('Full API Response:', result);
         console.log('Orbit data:', result.orbit);
@@ -230,6 +296,15 @@ async function processObservations(objectName, observations) {
             
             const riskLevel = result.risk.risk_level || 'unknown';
             const moid = result.risk.moid_earth_au || result.risk.moid || 0;
+            
+
+            sendMetric('processing_success', {
+                objectName: objectName,
+                observations: observations.length,
+                processingTime: processingTime,
+                riskLevel: riskLevel,
+                moid: moid
+            });
             
             console.log('Extracted values:', { semiMajorAU, eccentricity, inclination, riskLevel, moid });
             
@@ -266,10 +341,25 @@ async function processObservations(objectName, observations) {
                 </div>
             `;
         } else {
+
+            sendMetric('processing_failed', {
+                objectName: objectName,
+                observations: observations.length,
+                processingTime: processingTime,
+                error: result.error
+            });
+            
             statusBox.className = 'status-box error';
             statusBox.innerHTML = `<h3>❌ Error</h3><p>${result.error || 'No orbit data returned'}</p>`;
         }
     } catch (error) {
+
+        sendMetric('processing_error', {
+            objectName: objectName,
+            observations: observations.length,
+            error: error.message
+        });
+        
         console.error('Error:', error);
         statusBox.className = 'status-box error';
         statusBox.innerHTML = `<h3>❌ Error</h3><p>Failed to process observations: ${error.message}</p>`;

@@ -1,0 +1,10 @@
+{
+  "name": "astro-orbit-service",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "protobuf",
+    "grpc",
+    "abseil"
+  ],
+  "builtin-baseline": "latest"
+}

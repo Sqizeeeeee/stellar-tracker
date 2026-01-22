@@ -1,0 +1,437 @@
+{
+  "title": "🚀 StellarTracker - Mission Control",
+  "uid": "stellartracker-mission-control",
+  "tags": ["stellartracker", "overview", "main"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "title": "🚨 ACTIVE ALERTS",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false
+    },
+    {
+      "title": "Current Alerts",
+      "type": "alertlist",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 1},
+      "options": {
+        "showOptions": "current",
+        "maxItems": 20,
+        "sortOrder": 1,
+        "dashboardAlerts": false,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": false,
+          "normal": false,
+          "error": true
+        }
+      },
+      "targets": [
+        {
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "🏥 SYSTEM HEALTH",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 7},
+      "collapsed": false
+    },
+    {
+      "title": "Services Status",
+      "type": "stat",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 8},
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}}},
+            {"type": "value", "options": {"1": {"text": "UP", "color": "green"}}}
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 1, "color": "green"}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"orchestrator\"}",
+          "legendFormat": "🎯 Orchestrator",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job=\"orbit-service\"}",
+          "legendFormat": "🛰️ Orbit Service",
+          "refId": "B"
+        },
+        {
+          "expr": "up{job=\"collision-service\"}",
+          "legendFormat": "💥 Collision Service",
+          "refId": "C"
+        },
+        {
+          "expr": "up{job=\"web-service\"}",
+          "legendFormat": "🌐 Web Service",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "title": "💾 RESOURCES",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 14},
+      "collapsed": false
+    },
+    {
+      "title": "CPU Usage by Service",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 15},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Memory Usage by Service",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 15},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "{{job}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Disk Usage",
+      "type": "gauge",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 23},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 70, "color": "yellow"},
+              {"value": 90, "color": "red"}
+            ]
+          },
+          "max": 100,
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Network I/O",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 18, "x": 6, "y": 23},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total[5m])",
+          "legendFormat": "RX {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total[5m])",
+          "legendFormat": "TX {{device}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "🔄 gRPC COMMUNICATION",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 29},
+      "collapsed": false
+    },
+    {
+      "title": "Request Rate (Orchestrator)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(process_requests_total{service=\"orchestrator\"}[1m])",
+          "legendFormat": "Requests/sec",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Active Requests",
+      "type": "stat",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 30},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 5, "color": "yellow"},
+              {"value": 10, "color": "red"}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "orchestrator_active_requests",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Total Processed",
+      "type": "stat",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 30},
+      "targets": [
+        {
+          "expr": "process_requests_total{service=\"orchestrator\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Success vs Failed",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 34},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "bars", "lineWidth": 2}
+        }
+      },
+      "targets": [
+        {
+          "expr": "process_requests_success{service=\"orchestrator\"}",
+          "legendFormat": "✅ Success",
+          "refId": "A"
+        },
+        {
+          "expr": "process_requests_failed{service=\"orchestrator\"}",
+          "legendFormat": "❌ Failed",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "🎯 BUSINESS METRICS",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 38},
+      "collapsed": false
+    },
+    {
+      "title": "Objects Processed",
+      "type": "stat",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 39},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "blue"}
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "process_requests_success{service=\"orchestrator\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Processing Timeline",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 39},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(process_requests_total{service=\"orchestrator\"}[5m])",
+          "legendFormat": "Requests/min",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "👤 USER ACTIVITY",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 45},
+      "collapsed": false
+    },
+    {
+      "title": "User Events",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 46},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(user_events_total[5m])",
+          "legendFormat": "{{event_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "CSV Parse Operations",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "bars", "lineWidth": 2}
+        }
+      },
+      "targets": [
+        {
+          "expr": "csv_parse_operations_total",
+          "legendFormat": "{{method}} - {{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "💾 DATABASE OPERATIONS",
+      "type": "row",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 54},
+      "collapsed": false
+    },
+    {
+      "title": "MongoDB Operations Rate",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 55},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(mongodb_operations_total[1m])",
+          "legendFormat": "{{collection}} - {{operation}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Objects Created (Total)",
+      "type": "stat",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 55},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "steps": [{"value": 0, "color": "blue"}]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "objects_created_total",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Observations Saved Rate",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus"},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 55},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(observations_saved_total[5m])",
+          "legendFormat": "{{object_name}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: StellarTracker Alerts
+    folder: Alerts
+    interval: 1m
+    rules:
+      - uid: stellartracker-alerts
+        title: Import from Prometheus
+        condition: A
+        data:
+          - refId: A
+            queryType: prometheus
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: ALERTS{alertstate="firing"}
+              refId: A
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: "Alerts from Prometheus Alertmanager"
+        labels:
+          team: devops
