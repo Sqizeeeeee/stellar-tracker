@@ -1,6 +1,4 @@
 # === Python ===
-web/cli.py
-
 __pycache__/
 *.py[cod]
 *$py.class
@@ -31,6 +29,10 @@ env/
 ENV/
 env.bak/
 venv.bak/
+
+# === CLI utilities (local only) ===
+web/cli.py
+cli.py
 
 # === Build & CMake ===
 build/
