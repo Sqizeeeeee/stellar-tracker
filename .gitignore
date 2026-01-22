@@ -1,4 +1,6 @@
 # === Python ===
+web/cli.py
+
 __pycache__/
 *.py[cod]
 *$py.class

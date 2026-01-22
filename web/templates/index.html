@@ -12,7 +12,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="dashboard">
+<div class="dashboard" 
+     data-stats='{{ object_stats | tojson }}'
+     data-processing='{{ processing_stats | tojson }}'
+     data-high-risk='{{ high_risk_objects | tojson }}'
+     data-user-recent='{{ user_recent | tojson }}'
+     data-popular='{{ popular_objects | tojson }}'
+     data-total-obs="{{ total_observations }}">
+    
     <h2 class="page-title">Mission Control Dashboard</h2>
     
     <div class="stats-grid">
@@ -20,7 +27,7 @@
             <div class="stat-icon">🎯</div>
             <div class="stat-content">
                 <h3>Tracked Objects</h3>
-                <p class="stat-value" id="totalObjects">0</p>
+                <p class="stat-value">{{ object_stats.total }}</p>
             </div>
         </div>
         
@@ -28,7 +35,7 @@
             <div class="stat-icon">🔴</div>
             <div class="stat-content">
                 <h3>High Risk</h3>
-                <p class="stat-value" id="highRiskCount">0</p>
+                <p class="stat-value">{{ object_stats.high }}</p>
             </div>
         </div>
         
@@ -36,7 +43,7 @@
             <div class="stat-icon">🟡</div>
             <div class="stat-content">
                 <h3>Moderate Risk</h3>
-                <p class="stat-value" id="moderateRiskCount">0</p>
+                <p class="stat-value">{{ object_stats.moderate }}</p>
             </div>
         </div>
         
@@ -44,28 +51,187 @@
             <div class="stat-icon">🟢</div>
             <div class="stat-content">
                 <h3>Low Risk</h3>
-                <p class="stat-value" id="lowRiskCount">0</p>
+                <p class="stat-value">{{ object_stats.low }}</p>
             </div>
         </div>
     </div>
 
     <div class="dashboard-grid">
+        <!-- High Risk Objects -->
+        {% if high_risk_objects %}
+        <div class="panel alert-panel">
+            <h3>🚨 High Risk Objects</h3>
+            <div class="object-list">
+                {% for obj in high_risk_objects %}
+                <div class="object-item risk-high">
+                    <div class="object-info">
+                        <strong>{{ obj.object_name }}</strong>
+                        <span class="moid">MOID: {{ "%.6f"|format(obj.risk.moid_earth_au) }} AU</span>
+                    </div>
+                    <div class="object-meta">
+                        <span class="observations">{{ obj.observations_count }} obs</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Objects -->
         <div class="panel">
-            <h3>Recent Detections</h3>
-            <div id="recentObjects" class="object-list">
-                <p class="empty-state">No objects detected yet</p>
+            <h3>📡 Your Recent Detections</h3>
+            <div class="object-list">
+                {% if user_recent %}
+                    {% for obj in user_recent %}
+                    <div class="object-item risk-{{ obj.risk.risk_level }}">
+                        <div class="object-info">
+                            <strong>{{ obj.object_name }}</strong>
+                            <span class="risk-badge badge-{{ obj.risk.risk_level }}">
+                                {{ obj.risk.risk_level | upper }}
+                            </span>
+                        </div>
+                        <div class="object-meta">
+                            <span class="time">{{ obj.created_at[:16] if obj.created_at else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No objects detected yet. <a href="{{ url_for('routes.upload_page') }}">Upload observations</a></p>
+                {% endif %}
             </div>
         </div>
 
+        <!-- Popular Objects -->
+        <div class="panel">
+            <h3>⭐ Most Observed</h3>
+            <div class="object-list">
+                {% if popular_objects %}
+                    {% for obj in popular_objects %}
+                    <div class="object-item">
+                        <div class="object-info">
+                            <strong>{{ obj.object_name }}</strong>
+                        </div>
+                        <div class="object-meta">
+                            <span class="observations">{{ obj.observations_count }} observations</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No data yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Processing Stats -->
+        <div class="panel">
+            <h3>📊 Processing Statistics</h3>
+            <div class="stats-details">
+                <div class="stat-row">
+                    <span>Total Requests:</span>
+                    <strong>{{ processing_stats.total }}</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Success Rate:</span>
+                    <strong class="text-success">{{ processing_stats.success_rate }}%</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Avg Processing Time:</span>
+                    <strong>{{ processing_stats.avg_processing_time }}s</strong>
+                </div>
+                <div class="stat-row">
+                    <span>Total Observations:</span>
+                    <strong>{{ total_observations }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Chart -->
         <div class="panel">
             <h3>Risk Distribution</h3>
             <canvas id="riskChart"></canvas>
         </div>
-
-        <div class="panel full-width">
-            <h3>System Activity</h3>
-            <canvas id="activityChart"></canvas>
-        </div>
     </div>
 </div>
+
+<style>
+.alert-panel {
+    border-left: 4px solid var(--danger);
+}
+
+.object-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.object-item:last-child {
+    border-bottom: none;
+}
+
+.object-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.object-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.moid {
+    color: var(--danger);
+    font-size: 0.9em;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+
+.badge-high { background: var(--danger); color: white; }
+.badge-moderate { background: var(--warning); color: black; }
+.badge-low { background: var(--success); color: white; }
+
+.stats-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.text-success { color: var(--success); }
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.empty-state a:hover {
+    text-decoration: underline;
+}
+</style>
 {% endblock %}

@@ -43,6 +43,32 @@ def init_db():
     print("✅ Database indexes created")
 
 
+def serialize_mongo_object(obj):
+    """Конвертировать MongoDB объект в JSON-совместимый формат"""
+    if obj is None:
+        return None
+    
+    if isinstance(obj, list):
+        return [serialize_mongo_object(item) for item in obj]
+    
+    if isinstance(obj, dict):
+        serialized = {}
+        for key, value in obj.items():
+            if key == '_id':
+                serialized['id'] = str(value)
+            elif isinstance(value, datetime):
+                serialized[key] = value.isoformat()
+            elif isinstance(value, dict):
+                serialized[key] = serialize_mongo_object(value)
+            elif isinstance(value, list):
+                serialized[key] = [serialize_mongo_object(item) for item in value]
+            else:
+                serialized[key] = value
+        return serialized
+    
+    return obj
+
+
 class User(UserMixin):
     """User model for authentication"""
     
@@ -118,10 +144,8 @@ class AstroObject:
         """Создать или обновить объект"""
         obj_data = {
             'object_name': object_name,
-            'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow(),
             'created_by': created_by_email,
-            'observations_count': 0,
             'orbit': orbit_data,
             'risk': risk_data
         }
@@ -130,10 +154,16 @@ class AstroObject:
             # Upsert - создать или обновить
             result = objects_collection.update_one(
                 {'object_name': object_name},
-                {'$set': obj_data, '$setOnInsert': {'created_at': datetime.utcnow()}},
+                {
+                    '$set': obj_data,
+                    '$setOnInsert': {
+                        'created_at': datetime.utcnow(),
+                        'observations_count': 0
+                    }
+                },
                 upsert=True
             )
-            print(f"✅ Object saved: {object_name}")
+            print(f"✅ Object saved: {object_name} (matched={result.matched_count}, modified={result.modified_count}, upserted={result.upserted_id is not None})")
             return obj_data
         except Exception as e:
             print(f"❌ Error saving object: {e}")
@@ -160,6 +190,58 @@ class AstroObject:
             {'object_name': object_name},
             {'$inc': {'observations_count': 1}}
         )
+    
+    @staticmethod
+    def get_stats():
+        """Получить статистику по объектам"""
+        pipeline = [
+            {
+                '$group': {
+                    '_id': '$risk.risk_level',
+                    'count': {'$sum': 1}
+                }
+            }
+        ]
+        risk_stats = list(objects_collection.aggregate(pipeline))
+        
+        # Преобразуем в удобный формат
+        stats = {'low': 0, 'moderate': 0, 'high': 0, 'unknown': 0}
+        for stat in risk_stats:
+            level = stat['_id'] or 'unknown'
+            stats[level] = stat['count']
+        
+        stats['total'] = objects_collection.count_documents({})
+        return stats
+    
+    @staticmethod
+    def get_high_risk(limit=10):
+        """Получить объекты с высоким риском"""
+        objects = list(objects_collection.find(
+            {'risk.risk_level': 'high'}
+        ).sort([('risk.moid_earth_au', ASCENDING)]).limit(limit))
+        return [serialize_mongo_object(obj) for obj in objects]
+    
+    @staticmethod
+    def get_recent(limit=10):
+        """Получить последние объекты"""
+        return list(objects_collection.find().sort('created_at', DESCENDING).limit(limit))
+    
+    @staticmethod
+    def get_by_user(user_email, limit=10):
+        """Получить объекты пользователя"""
+        objects = list(objects_collection.find(
+            {'created_by': user_email}
+        ).sort('created_at', DESCENDING).limit(limit))
+        return [serialize_mongo_object(obj) for obj in objects]
+    
+    @staticmethod
+    def get_popular(limit=10):
+        """Получить популярные объекты (по количеству наблюдений)"""
+        objects = list(objects_collection.find().sort([
+            ('observations_count', DESCENDING),
+            ('created_at', DESCENDING)
+        ]).limit(limit))
+        return [serialize_mongo_object(obj) for obj in objects]
 
 
 class Observation:
@@ -237,6 +319,32 @@ class ProcessingHistory:
         return list(history_collection.find(
             {'created_by': user_email}
         ).sort('created_at', DESCENDING).limit(limit))
+    
+    @staticmethod
+    def get_stats():
+        """Получить статистику обработки"""
+        total = history_collection.count_documents({})
+        success = history_collection.count_documents({'status': 'success'})
+        error = history_collection.count_documents({'status': 'error'})
+        
+        # Средняя скорость обработки
+        pipeline = [
+            {'$match': {'status': 'success'}},
+            {'$group': {
+                '_id': None,
+                'avg_time': {'$avg': '$processing_time'}
+            }}
+        ]
+        avg_result = list(history_collection.aggregate(pipeline))
+        avg_time = avg_result[0]['avg_time'] if avg_result else 0
+        
+        return {
+            'total': total,
+            'success': success,
+            'error': error,
+            'success_rate': round(success / total * 100, 1) if total > 0 else 0,
+            'avg_processing_time': round(avg_time, 2)
+        }
 
 
 # Initialize database on import

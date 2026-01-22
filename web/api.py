@@ -18,7 +18,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 @api_bp.route('/process', methods=['POST'])
-# @login_required  # Временно отключаем для отладки
+@login_required
 def process_observations():
     """Обработка наблюдений через Orchestrатор"""
     print("🔵 /api/process called", file=sys.stderr, flush=True)
@@ -53,16 +53,15 @@ def process_observations():
         # Отправляем в Orchestrator
         response = grpc_client.orchestrator_stub.Process(request_msg, timeout=30.0)
         
-        print(f"✅ Orchestrator response: success={response.success}, error={response.error}", file=sys.stderr, flush=True)
-        print(f"   Response type: {type(response)}", file=sys.stderr, flush=True)
-        print(f"   Response fields: {[f.name for f in response.DESCRIPTOR.fields]}", file=sys.stderr, flush=True)
-        
-        # Вычисляем время обработки
-        processing_time = (datetime.now() - start_time).total_seconds()
-        
         # Проверяем что ответ содержит нужные поля
         has_orbit = 'orbit' in [f.name for f in response.DESCRIPTOR.fields]
         has_risk = 'risk' in [f.name for f in response.DESCRIPTOR.fields]
+        
+        print(f"✅ Orchestrator response: success={response.success}, error={response.error}", file=sys.stderr, flush=True)
+        print(f"   has_orbit={has_orbit}, has_risk={has_risk}", file=sys.stderr, flush=True)
+        
+        # Вычисляем время обработки
+        processing_time = (datetime.now() - start_time).total_seconds()
         
         if not response.success:
             return jsonify({
@@ -77,38 +76,55 @@ def process_observations():
             }), 500
         
         if response.success and has_orbit and has_risk:
+            print("🔵 Entering save block...", file=sys.stderr, flush=True)
+            
             # Сохраняем объект в БД
-            AstroObject.create(
-                object_name=data['object_name'],
-                orbit_data={
-                    'a_au': response.orbit.a_au,
-                    'e': response.orbit.e,
-                    'i_deg': response.orbit.i_deg,
-                    'omega_deg': response.orbit.omega_deg,
-                    'big_omega_deg': response.orbit.big_mega_deg,  # ИСПРАВЛЕНО: читаем big_mega_deg из proto
-                    'm_deg': response.orbit.m_deg,
-                    'epoch': response.orbit.epoch
-                },
-                risk_data={
-                    'risk_level': response.risk.risk_level,
-                    'moid_earth_au': response.risk.moid_earth_au,
-                    'potential_impact': response.risk.potential_impact
-                    # 'closest_approach': response.risk.closest_approach  # Нет в proto
-                },
-                created_by_email=current_user.email
-            )
+            user_email = current_user.email if current_user.is_authenticated else 'anonymous'
+            
+            print(f"🔵 Saving object: {data['object_name']}, user: {user_email}", file=sys.stderr, flush=True)
+            print(f"🔵 Orbit data: {response.orbit}", file=sys.stderr, flush=True)
+            print(f"🔵 Risk data: {response.risk}", file=sys.stderr, flush=True)
+            
+            try:
+                result = AstroObject.create(
+                    object_name=data['object_name'],
+                    orbit_data={
+                        'a_au': response.orbit.a_au,
+                        'e': response.orbit.e,
+                        'i_deg': response.orbit.i_deg,
+                        'omega_deg': response.orbit.omega_deg,
+                        'big_omega_deg': response.orbit.big_mega_deg,
+                        'm_deg': response.orbit.m_deg,
+                        'epoch': response.orbit.epoch
+                    },
+                    risk_data={
+                        'risk_level': response.risk.risk_level,
+                        'moid_earth_au': response.risk.moid_earth_au,
+                        'potential_impact': response.risk.potential_impact
+                    },
+                    created_by_email=user_email
+                )
+                print(f"✅ Object create result: {result is not None}", file=sys.stderr, flush=True)
+            except Exception as save_error:
+                print(f"❌ Error in AstroObject.create: {save_error}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
             
             # Сохраняем наблюдения в БД
+            print(f"🔵 Saving {len(data['observations'])} observations...", file=sys.stderr, flush=True)
             for obs in data['observations']:
-                Observation.create(
-                    object_name=data['object_name'],
-                    obs_time=obs['obs_time'],
-                    ra_deg=float(obs['ra_deg']),
-                    dec_deg=float(obs['dec_deg']),
-                    station=obs.get('station', '500'),
-                    catalog=obs.get('catalog', 'Gaia2'),
-                    created_by_email=current_user.email
-                )
+                try:
+                    Observation.create(
+                        object_name=data['object_name'],
+                        obs_time=obs['obs_time'],
+                        ra_deg=float(obs['ra_deg']),
+                        dec_deg=float(obs['dec_deg']),
+                        station=obs.get('station', '500'),
+                        catalog=obs.get('catalog', 'Gaia2'),
+                        created_by_email=user_email
+                    )
+                except Exception as obs_error:
+                    print(f"❌ Error saving observation: {obs_error}", file=sys.stderr, flush=True)
             
             # Сохраняем историю успешной обработки
             ProcessingHistory.create(
@@ -116,7 +132,7 @@ def process_observations():
                 object_name=data['object_name'],
                 status='success',
                 processing_time=processing_time,
-                created_by_email=current_user.email
+                created_by_email=user_email
             )
             
             # Отправляем real-time обновление через WebSocket
@@ -129,13 +145,14 @@ def process_observations():
             })
         else:
             # Сохраняем историю ошибки
+            user_email = current_user.email if current_user.is_authenticated else 'anonymous'
             ProcessingHistory.create(
                 request_id=request_id,
                 object_name=data['object_name'],
                 status='error',
                 error_message=response.error,
                 processing_time=processing_time,
-                created_by_email=current_user.email
+                created_by_email=user_email
             )
         
         return jsonify({
@@ -146,7 +163,7 @@ def process_observations():
                 'e': response.orbit.e,
                 'i_deg': response.orbit.i_deg,
                 'omega_deg': response.orbit.omega_deg,
-                'big_omega_deg': response.orbit.big_mega_deg,  # ИСПРАВЛЕНО: читаем big_mega_deg из proto
+                'big_omega_deg': response.orbit.big_mega_deg,
                 'm_deg': response.orbit.m_deg,
                 'epoch': response.orbit.epoch
             } if has_orbit else None,
@@ -154,19 +171,19 @@ def process_observations():
                 'risk_level': response.risk.risk_level,
                 'moid_earth_au': response.risk.moid_earth_au,
                 'potential_impact': response.risk.potential_impact
-                # 'closest_approach': response.risk.closest_approach  # Нет в proto
             } if has_risk else None
         })
         
     except grpc.RpcError as e:
         # Сохраняем ошибку gRPC
+        user_email = current_user.email if current_user.is_authenticated else 'anonymous'
         ProcessingHistory.create(
             request_id=request_id,
             object_name=data.get('object_name', 'unknown'),
             status='error',
             error_message=f'gRPC Error: {e.code()}',
             processing_time=(datetime.now() - start_time).total_seconds(),
-            created_by_email=current_user.email
+            created_by_email=user_email
         )
         return jsonify({'success': False, 'error': f'gRPC Error: {e.code()}'}), 500
     except Exception as e:
@@ -179,7 +196,7 @@ def process_observations():
 
 
 @api_bp.route('/orbit/calculate', methods=['POST'])
-# @login_required
+@login_required  # РАСКОММЕНТИРОВАНО
 def calculate_orbit():
     """Расчет орбиты по наблюдениям"""
     try:
@@ -224,7 +241,7 @@ def calculate_orbit():
 
 
 @api_bp.route('/collision/assess', methods=['POST'])
-# @login_required
+@login_required
 def assess_collision():
     """Оценка риска столкновения"""
     try:
@@ -234,7 +251,7 @@ def assess_collision():
             e=float(data['e']),
             i_deg=float(data['i_deg']),
             omega_deg=float(data['omega_deg']),
-            big_mega_deg=float(data['big_omega_deg']),  # ИСПРАВЛЕНО: отправляем как big_mega_deg в proto
+            big_mega_deg=float(data['big_omega_deg']),
             m_deg=float(data['m_deg']),
             epoch=data['epoch']
         )
@@ -275,7 +292,7 @@ def metrics():
 
 
 @api_bp.route('/parse-csv', methods=['POST'])
-# @login_required
+@login_required
 def parse_csv():
     """Парсинг большого CSV файла на сервере"""
     try:
