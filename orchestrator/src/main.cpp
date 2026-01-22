@@ -6,7 +6,14 @@
 
 using astro::OrchestratorService;
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc > 1 && std::string(argv[1]) == "--test") {
+        std::cout << "Test mode" << std::endl;
+        return 0;
+    }
+    
+    std::cout << "Orchestrator starting..." << std::endl;
+
     // CollisionService — обязателен
     const std::string collision_addr = 
         std::getenv("COLLISION_SERVICE_ADDR") ? std::getenv("COLLISION_SERVICE_ADDR") : "localhost:50053";
