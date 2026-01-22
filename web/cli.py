@@ -4,6 +4,9 @@
 import sys
 import os
 
+
+#TODO: добавить интерфейс просмотра бд
+
 # Добавляем путь к проекту
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

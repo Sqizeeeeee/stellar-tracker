@@ -58,6 +58,12 @@ app.register_blueprint(api_bp)
 # Регистрируем middleware
 register_middleware(app)
 
+# Metrics endpoint для Prometheus (корневой путь для совместимости)
+@app.route('/metrics')
+def metrics():
+    """Prometheus metrics endpoint"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+
 # WebSocket события
 @socketio.on('connect')
 def handle_connect():

@@ -56,4 +56,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 50052
 
-CMD ["python", "orbit_service.py"]
+CMD ["python", "-u", "orbit_service.py"]

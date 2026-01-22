@@ -63,6 +63,13 @@ from org.orekit.orbits import KeplerianOrbit, CartesianOrbit
 from org.orekit.estimation.measurements import AngularRaDec, ObservableSatellite, GroundStation
 from org.orekit.estimation.iod import IodGooding
 from org.hipparchus.geometry.euclidean.threed import Vector3D
+from org.orekit.estimation.leastsquares import BatchLSEstimator
+from org.orekit.propagation.conversion import NumericalPropagatorBuilder, DormandPrince853IntegratorBuilder
+from org.orekit.forces.gravity.potential import GravityFieldFactory
+from org.orekit.forces.gravity import HolmesFeatherstoneAttractionModel
+from org.orekit.orbits import PositionAngleType
+from org.hipparchus.optim.nonlinear.vector.leastsquares import GaussNewtonOptimizer
+from org.hipparchus.linear import QRDecomposer
 
 # Импортируем proto
 from proto import astro_pb2
@@ -245,9 +252,112 @@ def determine_orbit_gooding(observations, station_lat_deg=0.0, station_lon_deg=0
     return keplerian_orbit
 
 
+def determine_orbit_batch_least_squares(observations, station_lat_deg=0.0, station_lon_deg=0.0, station_alt_m=0.0):
+    """
+    Batch Least Squares - работает с любым количеством наблюдений и временными промежутками.
+    """
+    if len(observations) < 3:
+        raise ValueError("Необходимо минимум 3 наблюдения")
+    
+    utc = TimeScalesFactory.getUTC()
+    earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
+                            Constants.WGS84_EARTH_FLATTENING,
+                            FramesFactory.getITRF(IERSConventions.IERS_2010, True))
+    
+    inertial_frame = FramesFactory.getEME2000()
+    mu = Constants.EGM96_EARTH_MU
+    
+    # УЛУЧШЕННОЕ начальное приближение - используем типичные параметры МКС
+    middle_obs = observations[len(observations)//2]
+    middle_date = parse_iso_time(middle_obs.obs_time)
+    
+    # Типичные параметры МКС: a=6778 км, e=0.0001, i=51.6°
+    a = 6778000.0  # метры
+    e = 0.0001
+    i = math.radians(51.6)
+    omega = math.radians(0.0)
+    raan = math.radians(0.0)
+    anomaly = math.radians(0.0)
+    
+    initial_orbit = KeplerianOrbit(a, e, i, omega, raan, anomaly,
+                                   PositionAngleType.TRUE,
+                                   inertial_frame,
+                                   middle_date,
+                                   mu)
+    
+    # Создаем station и satellite
+    observer_position = GeodeticPoint(math.radians(station_lat_deg),
+                                     math.radians(station_lon_deg),
+                                     station_alt_m)
+    topo_frame = TopocentricFrame(earth, observer_position, "observer")
+    station = GroundStation(topo_frame)
+    satellite = ObservableSatellite(0)
+    
+    # Создаем propagator builder
+    min_step = 0.001
+    max_step = 300.0
+    dP = 1.0
+    integrator_builder = DormandPrince853IntegratorBuilder(min_step, max_step, dP)
+    
+    propagator_builder = NumericalPropagatorBuilder(
+        initial_orbit,
+        integrator_builder,
+        PositionAngleType.TRUE,
+        dP
+    )
+    
+    propagator_builder.setMass(1000.0)
+    
+    # Добавляем гравитацию
+    gravity_provider = GravityFieldFactory.getNormalizedProvider(4, 4)
+    gravity = HolmesFeatherstoneAttractionModel(earth.getBodyFrame(), gravity_provider)
+    propagator_builder.addForceModel(gravity)
+    
+    # Создаем estimator
+    optimizer = GaussNewtonOptimizer(QRDecomposer(1.0e-11), True)
+    estimator = BatchLSEstimator(optimizer, propagator_builder)
+    estimator.setParametersConvergenceThreshold(1.0e-2)  # Увеличили толеранс
+    estimator.setMaxIterations(30)  # Больше итераций
+    estimator.setMaxEvaluations(100)
+    
+    # Добавляем все наблюдения
+    for obs in observations:
+        date = parse_iso_time(obs.obs_time)
+        ra_rad = math.radians(obs.ra_deg)
+        dec_rad = math.radians(obs.dec_deg)
+        
+        sigma_ra = math.radians(10.0 / 3600.0)  # 10 arcsec (увеличили толеранс)
+        sigma_dec = math.radians(10.0 / 3600.0)
+        
+        measurement = AngularRaDec(station, inertial_frame, date,
+                                   [ra_rad, dec_rad],
+                                   [sigma_ra, sigma_dec],
+                                   [1.0, 1.0],
+                                   satellite)
+        estimator.addMeasurement(measurement)
+    
+    print(f"   Запуск Batch LS с {len(observations)} наблюдениями (начальное приближение: МКС-подобная орбита)...")
+    
+    # Запускаем оценку
+    estimated = estimator.estimate()
+    estimated_orbit = estimated[0].getInitialState().getOrbit()
+    keplerian_orbit = KeplerianOrbit(estimated_orbit)
+    
+    print(f"   ✓ Batch LS сошёлся за {estimated[0].getIterations()} итераций, RMS={estimated[0].getRMS():.6f}")
+    
+    return keplerian_orbit
+
+
 # ============================================================
 # 4) gRPC СЕРВИС
 # ============================================================
+
+# Prometheus метрики (ПЕРЕНЕСЕНЫ ПЕРЕД КЛАССОМ)
+ORBIT_CALCULATIONS = Counter('orbit_calculations_total', 'Total orbit calculations performed')
+ORBIT_DURATION = Histogram('orbit_calculation_duration_seconds', 'Time spent on orbit calculation')
+ORBIT_ERRORS = Counter('orbit_calculation_errors_total', 'Total orbit calculation errors')
+ACTIVE_ORBIT_REQUESTS = Gauge('orbit_service_active_requests', 'Number of active orbit requests')
+
 
 class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
     """Реализация OrbitService"""
@@ -274,92 +384,101 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
                 if len(request.observations) < 3:
                     raise ValueError("Необходимо минимум 3 наблюдения для определения орбиты")
             
-            # Извлекаем координаты станции
-            first_obs = request.observations[0]
-            station_lat = 48.0  # По умолчанию Европа
-            station_lon = 11.0
-            station_alt = 500.0
-            
-            if first_obs.station and ',' in first_obs.station:
-                try:
-                    parts = first_obs.station.split(',')
-                    if len(parts) >= 3:
-                        station_lat = float(parts[0])
-                        station_lon = float(parts[1])
-                        station_alt = float(parts[2])
-                except:
-                    pass
-            
-            # Пробуем сначала Gooding, потом fallback на упрощённый метод
-            orbit = None
-            method_used = "unknown"
-            
-            try:
-                print("   Пробую метод Gooding IOD...")
-                orbit = determine_orbit_gooding(
-                    request.observations,
-                    station_lat,
-                    station_lon,
-                    station_alt
-                )
-                method_used = "Gooding IOD"
+                # Извлекаем координаты станции
+                first_obs = request.observations[0]
+                station_lat = 48.0
+                station_lon = 11.0
+                station_alt = 500.0
                 
-                # Проверяем реалистичность
-                altitude_km = (orbit.getA() / 1000.0) - 6371
-                if altitude_km < 100 or altitude_km > 100000:
-                    print(f"   ⚠️ Gooding дал нереалистичную орбиту (высота {altitude_km:.0f} км), пробую упрощённый метод...")
-                    raise ValueError("Unrealistic orbit from Gooding")
+                if first_obs.station and ',' in first_obs.station:
+                    try:
+                        parts = first_obs.station.split(',')
+                        if len(parts) >= 3:
+                            station_lat = float(parts[0])
+                            station_lon = float(parts[1])
+                            station_alt = float(parts[2])
+                    except:
+                        pass
+                
+                orbit = None
+                method_used = "unknown"
+                
+                # Стратегия: пробуем методы по порядку от лучшего к худшему
+                
+                # 1. Batch Least Squares (универсальный, работает всегда)
+                try:
+                    print("   Пробую метод Batch Least Squares...")
+                    orbit = determine_orbit_batch_least_squares(
+                        request.observations,
+                        station_lat,
+                        station_lon,
+                        station_alt
+                    )
+                    method_used = "Batch LS"
                     
-            except Exception as e:
-                print(f"   ⚠️ Gooding не сработал: {str(e)}")
-                print("   Пробую упрощённый метод...")
-                orbit = determine_orbit_simplified(
-                    request.observations,
-                    station_lat,
-                    station_lon,
-                    station_alt
+                    # Проверяем реалистичность
+                    altitude_km = (orbit.getA() / 1000.0) - 6371
+                    if altitude_km < 100 or altitude_km > 100000 or orbit.getE() >= 1.0:
+                        print(f"   ⚠️ Batch LS дал нереалистичную орбиту (h={altitude_km:.0f} км, e={orbit.getE():.6f})")
+                        raise ValueError("Unrealistic orbit from Batch LS")
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Batch LS не сработал: {str(e)}")
+                    
+                    # 2. Пробуем Gooding (если <= 3 наблюдения и короткий промежуток)
+                    if len(request.observations) == 3:
+                        try:
+                            print("   Пробую метод Gooding IOD...")
+                            orbit = determine_orbit_gooding(
+                                request.observations[:3],
+                                station_lat,
+                                station_lon,
+                                station_alt
+                            )
+                            method_used = "Gooding IOD"
+                        except Exception as e2:
+                            print(f"   ⚠️ Gooding не сработал: {str(e2)}")
+                    
+                    # 3. Fallback на упрощённый
+                    if orbit is None:
+                        print("   Пробую упрощённый метод...")
+                        orbit = determine_orbit_simplified(
+                            request.observations,
+                            station_lat,
+                            station_lon,
+                            station_alt
+                        )
+                        method_used = "Simplified"
+                
+                # Конвертируем в OrbitElements
+                a_au = orbit.getA() / Constants.IAU_2012_ASTRONOMICAL_UNIT
+                e = orbit.getE()
+                i_deg = math.degrees(orbit.getI())
+                omega_deg = math.degrees(orbit.getPerigeeArgument())
+                big_mega_deg = math.degrees(orbit.getRightAscensionOfAscendingNode())
+                m_deg = math.degrees(orbit.getMeanAnomaly())
+                epoch = str(orbit.getDate().toString())
+                
+                altitude_km = (orbit.getA() / 1000.0) - 6371
+                print(f"✓ Орбита вычислена ({method_used}): a={orbit.getA()/1000:.1f} km, e={e:.6f}, i={i_deg:.2f}°, высота={altitude_km:.0f} км")
+                
+                return astro_pb2.OrbitResponse(
+                    request_id=request.request_id,
+                    success=True,
+                    orbit=astro_pb2.OrbitElements(
+                        a_au=a_au,
+                        e=e,
+                        i_deg=i_deg,
+                        omega_deg=omega_deg,
+                        big_mega_deg=big_mega_deg,
+                        m_deg=m_deg,
+                        epoch=epoch
+                    )
                 )
-                method_used = "Simplified"
-            
-            # Конвертируем в OrbitElements
-            a_au = orbit.getA() / Constants.IAU_2012_ASTRONOMICAL_UNIT
-            e = orbit.getE()
-            i_deg = math.degrees(orbit.getI())
-            omega_deg = math.degrees(orbit.getPerigeeArgument())
-            big_mega_deg = math.degrees(orbit.getRightAscensionOfAscendingNode())
-            m_deg = math.degrees(orbit.getMeanAnomaly())
-            epoch = str(orbit.getDate().toString())
-            
-            altitude_km = (orbit.getA() / 1000.0) - 6371
-            print(f"✓ Орбита вычислена ({method_used}): a={orbit.getA()/1000:.1f} km, e={e:.6f}, i={i_deg:.2f}°, высота={altitude_km:.0f} км")
-            
-            return astro_pb2.OrbitResponse(
-                request_id=request.request_id,
-                success=True,
-                orbit=astro_pb2.OrbitElements(
-                    a_au=a_au,
-                    e=e,
-                    i_deg=i_deg,
-                    omega_deg=omega_deg,
-                    big_mega_deg=big_mega_deg,
-                    m_deg=m_deg,
-                    epoch=epoch
-                )
-            )
-            
-        except Exception as ex:
-            print(f"❌ Ошибка при вычислении орбиты: {str(ex)}")
-            import traceback
-            traceback.print_exc()
-            
-            return astro_pb2.OrbitResponse(
-                request_id=request.request_id,
-                success=False,
-                error=f"OrbitService error: {str(ex)}"
-            )
+                
         except Exception as ex:
             ORBIT_ERRORS.inc()
-            print(f"❌ Ошибка в OrbitService: {str(ex)}")
+            print(f"❌ Ошибка при вычислении орбиты: {str(ex)}")
             import traceback
             traceback.print_exc()
             
@@ -376,15 +495,8 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
 # 5) ЗАПУСК СЕРВИСА
 # ============================================================
 
-# Prometheus метрики
-ORBIT_CALCULATIONS = Counter('orbit_calculations_total', 'Total orbit calculations performed')
-ORBIT_DURATION = Histogram('orbit_calculation_duration_seconds', 'Time spent on orbit calculation')
-ORBIT_ERRORS = Counter('orbit_calculation_errors_total', 'Total orbit calculation errors')
-ACTIVE_ORBIT_REQUESTS = Gauge('orbit_service_active_requests', 'Number of active orbit requests')
-
 def serve():
     """Запускает gRPC сервер"""
-    # Запускаем HTTP сервер для Prometheus метрик на порту 8002
     start_http_server(8002)
     print("📊 Prometheus metrics доступны на http://localhost:8002/metrics")
     

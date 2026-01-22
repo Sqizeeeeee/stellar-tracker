@@ -12,7 +12,7 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     """Login page"""
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('routes.index'))
     
     if request.method == 'POST':
         email = request.form.get('email')
@@ -24,7 +24,7 @@ def login():
         if user:
             login_user(user, remember=remember)
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('index'))
+            return redirect(next_page) if next_page else redirect(url_for('routes.index'))
         else:
             flash('Invalid email or password', 'error')
     
@@ -35,7 +35,7 @@ def login():
 def register():
     """Registration page"""
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('routes.index'))
     
     if request.method == 'POST':
         email = request.form.get('email')
@@ -62,7 +62,7 @@ def register():
         if user:
             login_user(user)
             flash('Registration successful! Welcome to StellarTracker', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('routes.index'))
         else:
             flash('Registration failed. Please try again.', 'error')
     

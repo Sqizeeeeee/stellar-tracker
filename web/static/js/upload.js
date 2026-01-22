@@ -218,9 +218,21 @@ async function processObservations(objectName, observations) {
         
         const result = await response.json();
         
-        console.log('API Response:', result);
+        console.log('Full API Response:', result);
+        console.log('Orbit data:', result.orbit);
+        console.log('Risk data:', result.risk);
         
         if (result.success && result.orbit && result.risk) {
+            // Безопасное извлечение значений с fallback
+            const semiMajorAU = result.orbit.a_au || result.orbit.a || 0;
+            const eccentricity = result.orbit.e || result.orbit.ecc || 0;
+            const inclination = result.orbit.i_deg || result.orbit.i || result.orbit.inc || 0;
+            
+            const riskLevel = result.risk.risk_level || 'unknown';
+            const moid = result.risk.moid_earth_au || result.risk.moid || 0;
+            
+            console.log('Extracted values:', { semiMajorAU, eccentricity, inclination, riskLevel, moid });
+            
             statusBox.className = 'status-box success';
             statusBox.innerHTML = `
                 <h3>✅ Success!</h3>
@@ -229,26 +241,26 @@ async function processObservations(objectName, observations) {
                         <h5>Orbit Elements</h5>
                         <div class="result-item">
                             <span class="result-label">Semi-major axis:</span>
-                            <span class="result-value">${result.orbit.a_au.toFixed(4)} AU</span>
+                            <span class="result-value">${(semiMajorAU * 149597870.7).toFixed(0)} km (${semiMajorAU.toFixed(6)} AU)</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Eccentricity:</span>
-                            <span class="result-value">${result.orbit.e.toFixed(4)}</span>
+                            <span class="result-value">${eccentricity.toFixed(6)}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Inclination:</span>
-                            <span class="result-value">${result.orbit.i_deg.toFixed(2)}°</span>
+                            <span class="result-value">${inclination.toFixed(2)}°</span>
                         </div>
                     </div>
                     <div class="result-section">
                         <h5>Risk Assessment</h5>
                         <div class="result-item">
                             <span class="result-label">Risk Level:</span>
-                            <span class="result-value">${result.risk.risk_level.toUpperCase()}</span>
+                            <span class="result-value">${riskLevel.toUpperCase()}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">MOID:</span>
-                            <span class="result-value">${result.risk.moid_earth_au.toFixed(6)} AU</span>
+                            <span class="result-value">${moid.toFixed(6)} AU</span>
                         </div>
                     </div>
                 </div>

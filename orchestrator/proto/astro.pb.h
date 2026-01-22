@@ -305,7 +305,7 @@ class OrbitElements final : public ::google::protobuf::Message
   void _internal_set_big_mega_deg(double value);
 
   public:
-  // double M_deg = 6;
+  // double m_deg = 6;
   void clear_m_deg() ;
   double m_deg() const;
   void set_m_deg(double value);
@@ -1010,6 +1010,7 @@ class RiskResponse final : public ::google::protobuf::Message
     kRequestIdFieldNumber = 2,
     kErrorFieldNumber = 4,
     kRiskFieldNumber = 1,
+    kOrbitFieldNumber = 5,
     kSuccessFieldNumber = 3,
   };
   // string request_id = 2;
@@ -1057,6 +1058,21 @@ class RiskResponse final : public ::google::protobuf::Message
   ::astro::CollisionRisk* PROTOBUF_NONNULL _internal_mutable_risk();
 
   public:
+  // .astro.OrbitElements orbit = 5;
+  bool has_orbit() const;
+  void clear_orbit() ;
+  const ::astro::OrbitElements& orbit() const;
+  [[nodiscard]] ::astro::OrbitElements* PROTOBUF_NULLABLE release_orbit();
+  ::astro::OrbitElements* PROTOBUF_NONNULL mutable_orbit();
+  void set_allocated_orbit(::astro::OrbitElements* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_orbit(::astro::OrbitElements* PROTOBUF_NULLABLE value);
+  ::astro::OrbitElements* PROTOBUF_NULLABLE unsafe_arena_release_orbit();
+
+  private:
+  const ::astro::OrbitElements& _internal_orbit() const;
+  ::astro::OrbitElements* PROTOBUF_NONNULL _internal_mutable_orbit();
+
+  public:
   // bool success = 3;
   void clear_success() ;
   bool success() const;
@@ -1071,8 +1087,8 @@ class RiskResponse final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<2, 4,
-                                   1, 42,
+  static const ::google::protobuf::internal::TcParseTable<3, 5,
+                                   2, 42,
                                    2>
       _table_;
 
@@ -1096,6 +1112,7 @@ class RiskResponse final : public ::google::protobuf::Message
     ::google::protobuf::internal::ArenaStringPtr request_id_;
     ::google::protobuf::internal::ArenaStringPtr error_;
     ::astro::CollisionRisk* PROTOBUF_NULLABLE risk_;
+    ::astro::OrbitElements* PROTOBUF_NULLABLE orbit_;
     bool success_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -2207,7 +2224,7 @@ inline void OrbitElements::_internal_set_big_mega_deg(double value) {
   _impl_.big_mega_deg_ = value;
 }
 
-// double M_deg = 6;
+// double m_deg = 6;
 inline void OrbitElements::clear_m_deg() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.m_deg_ = 0;
@@ -2215,13 +2232,13 @@ inline void OrbitElements::clear_m_deg() {
                   0x00000040U);
 }
 inline double OrbitElements::m_deg() const {
-  // @@protoc_insertion_point(field_get:astro.OrbitElements.M_deg)
+  // @@protoc_insertion_point(field_get:astro.OrbitElements.m_deg)
   return _internal_m_deg();
 }
 inline void OrbitElements::set_m_deg(double value) {
   _internal_set_m_deg(value);
   SetHasBit(_impl_._has_bits_[0], 0x00000040U);
-  // @@protoc_insertion_point(field_set:astro.OrbitElements.M_deg)
+  // @@protoc_insertion_point(field_set:astro.OrbitElements.m_deg)
 }
 inline double OrbitElements::_internal_m_deg() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
@@ -2872,7 +2889,7 @@ inline void RiskResponse::clear_success() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.success_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000008U);
+                  0x00000010U);
 }
 inline bool RiskResponse::success() const {
   // @@protoc_insertion_point(field_get:astro.RiskResponse.success)
@@ -2880,7 +2897,7 @@ inline bool RiskResponse::success() const {
 }
 inline void RiskResponse::set_success(bool value) {
   _internal_set_success(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   // @@protoc_insertion_point(field_set:astro.RiskResponse.success)
 }
 inline bool RiskResponse::_internal_success() const {
@@ -2955,6 +2972,105 @@ inline void RiskResponse::set_allocated_error(::std::string* PROTOBUF_NULLABLE v
     _impl_.error_.Set("", GetArena());
   }
   // @@protoc_insertion_point(field_set_allocated:astro.RiskResponse.error)
+}
+
+// .astro.OrbitElements orbit = 5;
+inline bool RiskResponse::has_orbit() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
+  PROTOBUF_ASSUME(!value || _impl_.orbit_ != nullptr);
+  return value;
+}
+inline void RiskResponse::clear_orbit() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.orbit_ != nullptr) _impl_.orbit_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline const ::astro::OrbitElements& RiskResponse::_internal_orbit() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::astro::OrbitElements* p = _impl_.orbit_;
+  return p != nullptr ? *p : reinterpret_cast<const ::astro::OrbitElements&>(::astro::_OrbitElements_default_instance_);
+}
+inline const ::astro::OrbitElements& RiskResponse::orbit() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:astro.RiskResponse.orbit)
+  return _internal_orbit();
+}
+inline void RiskResponse::unsafe_arena_set_allocated_orbit(
+    ::astro::OrbitElements* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.orbit_);
+  }
+  _impl_.orbit_ = reinterpret_cast<::astro::OrbitElements*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:astro.RiskResponse.orbit)
+}
+inline ::astro::OrbitElements* PROTOBUF_NULLABLE RiskResponse::release_orbit() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::astro::OrbitElements* released = _impl_.orbit_;
+  _impl_.orbit_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::astro::OrbitElements* PROTOBUF_NULLABLE RiskResponse::unsafe_arena_release_orbit() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:astro.RiskResponse.orbit)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::astro::OrbitElements* temp = _impl_.orbit_;
+  _impl_.orbit_ = nullptr;
+  return temp;
+}
+inline ::astro::OrbitElements* PROTOBUF_NONNULL RiskResponse::_internal_mutable_orbit() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.orbit_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::astro::OrbitElements>(GetArena());
+    _impl_.orbit_ = reinterpret_cast<::astro::OrbitElements*>(p);
+  }
+  return _impl_.orbit_;
+}
+inline ::astro::OrbitElements* PROTOBUF_NONNULL RiskResponse::mutable_orbit()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::astro::OrbitElements* _msg = _internal_mutable_orbit();
+  // @@protoc_insertion_point(field_mutable:astro.RiskResponse.orbit)
+  return _msg;
+}
+inline void RiskResponse::set_allocated_orbit(::astro::OrbitElements* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.orbit_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+
+  _impl_.orbit_ = reinterpret_cast<::astro::OrbitElements*>(value);
+  // @@protoc_insertion_point(field_set_allocated:astro.RiskResponse.orbit)
 }
 
 #ifdef __GNUC__

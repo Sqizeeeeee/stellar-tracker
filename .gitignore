@@ -40,7 +40,6 @@ CMakeScripts/
 cmake_install.cmake
 install_manifest.txt
 *.cmake
-Makefile
 *.cbp
 *.ninja_deps
 *.ninja_log

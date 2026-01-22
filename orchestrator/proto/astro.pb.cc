@@ -136,6 +136,7 @@ inline constexpr RiskResponse::Impl_::Impl_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         risk_{nullptr},
+        orbit_{nullptr},
         success_{false} {}
 
 template <typename>
@@ -295,15 +296,17 @@ const ::uint32_t
         1,
         0x081, // bitmap
         PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_._has_bits_),
-        7, // hasbit index offset
+        8, // hasbit index offset
         PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_.risk_),
         PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_.request_id_),
         PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_.success_),
         PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_.error_),
+        PROTOBUF_FIELD_OFFSET(::astro::RiskResponse, _impl_.orbit_),
         2,
         0,
-        3,
+        4,
         1,
+        3,
 };
 
 static const ::_pbi::MigrationSchema
@@ -334,27 +337,28 @@ const char descriptor_table_protodef_astro_2eproto[] ABSL_ATTRIBUTE_SECTION_VARI
     "\023\n\013object_name\030\003 \001(\t\"~\n\rOrbitElements\022\014\n"
     "\004a_au\030\001 \001(\001\022\t\n\001e\030\002 \001(\001\022\r\n\005i_deg\030\003 \001(\001\022\021\n"
     "\tomega_deg\030\004 \001(\001\022\024\n\014big_mega_deg\030\005 \001(\001\022\r"
-    "\n\005M_deg\030\006 \001(\001\022\r\n\005epoch\030\007 \001(\t\"k\n\rCollisio"
+    "\n\005m_deg\030\006 \001(\001\022\r\n\005epoch\030\007 \001(\t\"k\n\rCollisio"
     "nRisk\022\025\n\rperihelion_au\030\001 \001(\001\022\025\n\rmoid_ear"
     "th_au\030\002 \001(\001\022\030\n\020potential_impact\030\003 \001(\010\022\022\n"
     "\nrisk_level\030\004 \001(\t\"h\n\rOrbitResponse\022#\n\005or"
     "bit\030\001 \001(\0132\024.astro.OrbitElements\022\022\n\nreque"
     "st_id\030\002 \001(\t\022\017\n\007success\030\003 \001(\010\022\r\n\005error\030\004 "
-    "\001(\t\"f\n\014RiskResponse\022\"\n\004risk\030\001 \001(\0132\024.astr"
-    "o.CollisionRisk\022\022\n\nrequest_id\030\002 \001(\t\022\017\n\007s"
-    "uccess\030\003 \001(\010\022\r\n\005error\030\004 \001(\t2M\n\014OrbitServ"
-    "ice\022=\n\tCalculate\022\032.astro.ObservationsReq"
-    "uest\032\024.astro.OrbitResponse2K\n\020CollisionS"
-    "ervice\0227\n\nAssessRisk\022\024.astro.OrbitElemen"
-    "ts\032\023.astro.RiskResponse2Q\n\023OrchestratorS"
-    "ervice\022:\n\007Process\022\032.astro.ObservationsRe"
-    "quest\032\023.astro.RiskResponseb\006proto3"
+    "\001(\t\"\213\001\n\014RiskResponse\022\"\n\004risk\030\001 \001(\0132\024.ast"
+    "ro.CollisionRisk\022\022\n\nrequest_id\030\002 \001(\t\022\017\n\007"
+    "success\030\003 \001(\010\022\r\n\005error\030\004 \001(\t\022#\n\005orbit\030\005 "
+    "\001(\0132\024.astro.OrbitElements2M\n\014OrbitServic"
+    "e\022=\n\tCalculate\022\032.astro.ObservationsReque"
+    "st\032\024.astro.OrbitResponse2K\n\020CollisionSer"
+    "vice\0227\n\nAssessRisk\022\024.astro.OrbitElements"
+    "\032\023.astro.RiskResponse2Q\n\023OrchestratorSer"
+    "vice\022:\n\007Process\022\032.astro.ObservationsRequ"
+    "est\032\023.astro.RiskResponseb\006proto3"
 };
 static ::absl::once_flag descriptor_table_astro_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_astro_2eproto = {
     false,
     false,
-    954,
+    992,
     descriptor_table_protodef_astro_2eproto,
     "astro.proto",
     &descriptor_table_astro_2eproto_once,
@@ -1393,7 +1397,7 @@ OrbitElements::_table_ = {
     {::_pbi::TcParser::FastF64S1,
      {41, 5, 0,
       PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.big_mega_deg_)}},
-    // double M_deg = 6;
+    // double m_deg = 6;
     {::_pbi::TcParser::FastF64S1,
      {49, 6, 0,
       PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.m_deg_)}},
@@ -1414,7 +1418,7 @@ OrbitElements::_table_ = {
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.omega_deg_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double big_mega_deg = 5;
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.big_mega_deg_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-    // double M_deg = 6;
+    // double m_deg = 6;
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.m_deg_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // string epoch = 7;
     {PROTOBUF_FIELD_OFFSET(OrbitElements, _impl_.epoch_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
@@ -1510,7 +1514,7 @@ PROTOBUF_NOINLINE void OrbitElements::Clear() {
     }
   }
 
-  // double M_deg = 6;
+  // double m_deg = 6;
   if (CheckHasBit(cached_has_bits, 0x00000040U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_m_deg()) != 0) {
       target = stream->EnsureSpace(target);
@@ -1592,7 +1596,7 @@ PROTOBUF_NOINLINE void OrbitElements::Clear() {
         total_size += 9;
       }
     }
-    // double M_deg = 6;
+    // double m_deg = 6;
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_m_deg()) != 0) {
         total_size += 9;
@@ -2512,6 +2516,9 @@ RiskResponse::RiskResponse(
   _impl_.risk_ = (CheckHasBit(cached_has_bits, 0x00000004U))
                 ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.risk_)
                 : nullptr;
+  _impl_.orbit_ = (CheckHasBit(cached_has_bits, 0x00000008U))
+                ? ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.orbit_)
+                : nullptr;
   _impl_.success_ = from._impl_.success_;
 
   // @@protoc_insertion_point(copy_constructor:astro.RiskResponse)
@@ -2546,6 +2553,7 @@ inline void RiskResponse::SharedDtor(MessageLite& self) {
   this_._impl_.request_id_.Destroy();
   this_._impl_.error_.Destroy();
   delete this_._impl_.risk_;
+  delete this_._impl_.orbit_;
   this_._impl_.~Impl_();
 }
 
@@ -2592,17 +2600,17 @@ RiskResponse::GetClassData() const {
   return RiskResponse_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 1, 42, 2>
+const ::_pbi::TcParseTable<3, 5, 2, 42, 2>
 RiskResponse::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_._has_bits_),
     0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
+    5, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
+    4294967264,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
-    1,  // num_aux_entries
+    5,  // num_field_entries
+    2,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     RiskResponse_class_data_.base(),
     nullptr,  // post_loop_handler
@@ -2611,10 +2619,7 @@ RiskResponse::_table_ = {
     ::_pbi::TcParser::GetTable<::astro::RiskResponse>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string error = 4;
-    {::_pbi::TcParser::FastUS1,
-     {34, 1, 0,
-      PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.error_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // .astro.CollisionRisk risk = 1;
     {::_pbi::TcParser::FastMtS1,
      {10, 2, 0,
@@ -2624,9 +2629,19 @@ RiskResponse::_table_ = {
      {18, 0, 0,
       PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.request_id_)}},
     // bool success = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(RiskResponse, _impl_.success_), 3>(),
-     {24, 3, 0,
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(RiskResponse, _impl_.success_), 4>(),
+     {24, 4, 0,
       PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.success_)}},
+    // string error = 4;
+    {::_pbi::TcParser::FastUS1,
+     {34, 1, 0,
+      PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.error_)}},
+    // .astro.OrbitElements orbit = 5;
+    {::_pbi::TcParser::FastMtS1,
+     {42, 3, 1,
+      PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.orbit_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
@@ -2635,12 +2650,15 @@ RiskResponse::_table_ = {
     // string request_id = 2;
     {PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.request_id_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // bool success = 3;
-    {PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.success_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.success_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // string error = 4;
     {PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.error_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // .astro.OrbitElements orbit = 5;
+    {PROTOBUF_FIELD_OFFSET(RiskResponse, _impl_.orbit_), _Internal::kHasBitsOffset + 3, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::astro::CollisionRisk>()},
+      {::_pbi::TcParser::GetTable<::astro::OrbitElements>()},
   }},
   {{
     "\22\0\12\0\5\0\0\0"
@@ -2657,7 +2675,7 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x00000007U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       _impl_.request_id_.ClearNonDefaultToEmpty();
     }
@@ -2667,6 +2685,10 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
     if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       ABSL_DCHECK(_impl_.risk_ != nullptr);
       _impl_.risk_->Clear();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      ABSL_DCHECK(_impl_.orbit_ != nullptr);
+      _impl_.orbit_->Clear();
     }
   }
   _impl_.success_ = false;
@@ -2711,7 +2733,7 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
   }
 
   // bool success = 3;
-  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
     if (this_._internal_success() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -2727,6 +2749,13 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
           _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "astro.RiskResponse.error");
       target = stream->WriteStringMaybeAliased(4, _s, target);
     }
+  }
+
+  // .astro.OrbitElements orbit = 5;
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        5, *this_._impl_.orbit_, this_._impl_.orbit_->GetCachedSize(), target,
+        stream);
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -2754,7 +2783,7 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
     // string request_id = 2;
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!this_._internal_request_id().empty()) {
@@ -2774,8 +2803,13 @@ PROTOBUF_NOINLINE void RiskResponse::Clear() {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.risk_);
     }
-    // bool success = 3;
+    // .astro.OrbitElements orbit = 5;
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.orbit_);
+    }
+    // bool success = 3;
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (this_._internal_success() != 0) {
         total_size += 2;
       }
@@ -2800,7 +2834,7 @@ void RiskResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000000fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000001fU)) {
     if (CheckHasBit(cached_has_bits, 0x00000001U)) {
       if (!from._internal_request_id().empty()) {
         _this->_internal_set_request_id(from._internal_request_id());
@@ -2828,6 +2862,14 @@ void RiskResponse::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      ABSL_DCHECK(from._impl_.orbit_ != nullptr);
+      if (_this->_impl_.orbit_ == nullptr) {
+        _this->_impl_.orbit_ = ::google::protobuf::Message::CopyConstruct(arena, *from._impl_.orbit_);
+      } else {
+        _this->_impl_.orbit_->MergeFrom(*from._impl_.orbit_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (from._internal_success() != 0) {
         _this->_impl_.success_ = from._impl_.success_;
       }

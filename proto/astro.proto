@@ -51,6 +51,7 @@ message RiskResponse {
   string request_id        = 2;
   bool success             = 3;
   string error             = 4;
+  OrbitElements orbit      = 5;  // Добавляем orbit чтобы вернуть оба результата
 }
 
 // ====================== Сервисы ======================
