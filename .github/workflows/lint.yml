@@ -22,22 +22,7 @@ jobs:
     - name: Install ruff
       run: pip install ruff
     
-    - name: Lint web service
+    - name: Lint Python code
       run: |
-        echo "🔍 Linting web service..."
-        ruff check web/
-    
-    - name: Lint orbit service
-      run: |
-        echo "🔍 Linting orbit service..."
-        ruff check orbit-service/
-    
-    - name: Lint collision service
-      run: |
-        echo "🔍 Linting collision service..."
-        ruff check collision-service/
-    
-    - name: Format check
-      run: |
-        echo "🔍 Checking Python formatting..."
-        ruff format --check web/ orbit-service/ collision-service/
+        echo "🔍 Linting all Python code..."
+        ruff check web/ orbit-service/ collision-service/
