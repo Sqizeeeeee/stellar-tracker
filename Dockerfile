@@ -13,11 +13,14 @@ WORKDIR /src
 # Копируем весь код сразу (включая уже сгенерированные proto файлы)
 COPY . .
 
+# Проверяем что proto файлы есть
+RUN ls -la orchestrator/proto/ || echo "Proto directory not found!"
+
 # Собираем orchestrator - proto файлы уже есть в репозитории
 WORKDIR /src/orchestrator
 RUN mkdir -p build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+    make VERBOSE=1
 
 # Runtime
 FROM ubuntu:22.04
