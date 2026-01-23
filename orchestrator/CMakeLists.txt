@@ -4,9 +4,11 @@ project(orchestrator)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find packages
-find_package(Protobuf REQUIRED)
-find_package(gRPC REQUIRED)
+# Используем pkg-config для поиска библиотек
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PROTOBUF REQUIRED protobuf)
+pkg_check_modules(GRPC REQUIRED grpc++)
+pkg_check_modules(GRPCPP REQUIRED grpc++_unsecure)
 
 # Add executable
 add_executable(orchestrator
@@ -20,16 +22,17 @@ add_executable(orchestrator
 target_include_directories(orchestrator PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    proto
+    ${CMAKE_CURRENT_SOURCE_DIR}/proto
+    ${PROTOBUF_INCLUDE_DIRS}
+    ${GRPC_INCLUDE_DIRS}
+    ${GRPCPP_INCLUDE_DIRS}
 )
 
 # Link libraries
 target_link_libraries(orchestrator
-    gRPC::grpc++
-    protobuf::libprotobuf
-    grpc++
-    grpc
-    gpr
+    ${PROTOBUF_LIBRARIES}
+    ${GRPC_LIBRARIES}
+    ${GRPCPP_LIBRARIES}
     pthread
 )
 

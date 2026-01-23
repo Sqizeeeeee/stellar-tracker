@@ -4,8 +4,7 @@ FROM ubuntu:22.04 AS builder
 RUN apt-get update && apt-get install -y \
     build-essential cmake git \
     libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-    libgrpc-dev libgrpc++-dev libgrpc++1 \
-    libgtest-dev \
+    libgrpc-dev libgrpc++-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
@@ -29,14 +28,17 @@ COPY orchestrator/ ./orchestrator/
 # Собираем orchestrator из его директории
 WORKDIR /src/orchestrator
 RUN mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build . --config Release -j$(nproc)
+    cmake .. \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DProtobuf_PROTOC_EXECUTABLE=/usr/bin/protoc \
+      -DgRPC_CPP_PLUGIN_EXECUTABLE=/usr/bin/grpc_cpp_plugin && \
+    make -j$(nproc)
 
 # Runtime
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \
-    libprotobuf23 libgrpc++1 ca-certificates \
+    libprotobuf23 libgrpc++1.45 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем собранный бинарник
