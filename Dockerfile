@@ -10,11 +10,12 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /src
 
-# Копируем proto файлы
-COPY proto/ ./proto/
+# Копируем весь код сразу
+COPY . .
 
-# Генерируем proto для orchestrator
+# Генерируем proto для orchestrator используя системный protoc
 RUN mkdir -p orchestrator/proto && \
+    protoc --version && \
     protoc \
       --cpp_out=orchestrator/proto \
       --grpc_out=orchestrator/proto \
@@ -22,16 +23,10 @@ RUN mkdir -p orchestrator/proto && \
       --proto_path=proto \
       proto/astro.proto
 
-# Копируем orchestrator код
-COPY orchestrator/ ./orchestrator/
-
 # Собираем orchestrator из его директории
 WORKDIR /src/orchestrator
 RUN mkdir -p build && cd build && \
-    cmake .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DProtobuf_PROTOC_EXECUTABLE=/usr/bin/protoc \
-      -DgRPC_CPP_PLUGIN_EXECUTABLE=/usr/bin/grpc_cpp_plugin && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
     make -j$(nproc)
 
 # Runtime
