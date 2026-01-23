@@ -39,6 +39,9 @@ htmlcov/
 # Docker
 *.log
 
+# Docker Compose overrides для локальной разработки
+docker-compose.override.yml
+
 # Backups
 backups/
 

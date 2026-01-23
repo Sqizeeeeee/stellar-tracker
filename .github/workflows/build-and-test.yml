@@ -70,6 +70,11 @@ jobs:
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
     
+    - name: Build all services
+      run: |
+        echo "🔨 Building all Docker images..."
+        docker compose build --parallel
+    
     - name: Verify built images
       run: |
         echo "=== Docker images ==="
