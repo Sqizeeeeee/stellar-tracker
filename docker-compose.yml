@@ -162,8 +162,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-stellartracker_admin}
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_UNIFIED_ALERTING_ENABLED=true  # ДОБАВЛЕНО: включаем unified alerting
-      - GF_ALERTING_ENABLED=false  # ДОБАВЛЕНО: отключаем legacy alerting
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false  
     volumes:
       - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./monitoring/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
@@ -183,7 +183,7 @@ services:
   loki:
     image: grafana/loki:latest
     container_name: stellartracker-loki
-    # profiles: ["monitoring"]  # Закомментируй эту строку
+
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki-data:/loki
@@ -196,7 +196,7 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: stellartracker-promtail
-    # profiles: ["monitoring"]  # Закомментируй эту строку
+
     volumes:
       - ./monitoring/promtail/promtail.yml:/etc/promtail/config.yml:ro
       - /var/log:/var/log:ro
@@ -210,7 +210,7 @@ services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: stellartracker-node-exporter
-    # profiles: ["monitoring"]  # Закомментируй эту строку
+
     command:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
@@ -228,7 +228,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: stellartracker-cadvisor
-    # profiles: ["monitoring"]  # Закомментируй эту строку
+
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -247,7 +247,7 @@ volumes:
   grafana-data:
   loki-data:
   mongodb-data:
-  alertmanager-data:  # ДОБАВЛЕНО
+  alertmanager-data:
 
 networks:
   astro-net:

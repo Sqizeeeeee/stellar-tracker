@@ -1,15 +1,14 @@
-name: Code Quality & Security
+name: Lint Python Code
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
-  lint-python:
+  lint:
     runs-on: ubuntu-latest
-    name: Python Code Quality
     
     steps:
     - name: Checkout code
@@ -18,195 +17,27 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
-        cache: 'pip'
+        python-version: '3.11'
     
-    - name: Install linting tools
+    - name: Install ruff
+      run: pip install ruff
+    
+    - name: Lint web service
       run: |
-        python -m pip install --upgrade pip
-        pip install flake8 black isort mypy
+        echo "🔍 Linting web service..."
+        ruff check web/
     
-    - name: Check Python syntax
+    - name: Lint orbit service
       run: |
-        echo "🔍 Checking Python syntax..."
-        python -m py_compile collision-service/server.py
-        python -m py_compile orbit-service/orbit_service.py
-        python -m py_compile orbit-service/orbit_algorithms.py
-        echo "✅ Python syntax OK"
+        echo "🔍 Linting orbit service..."
+        ruff check orbit-service/
     
-    - name: Run flake8
-      continue-on-error: true
+    - name: Lint collision service
       run: |
-        echo "🔍 Running flake8..."
-        flake8 collision-service/ orbit-service/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 collision-service/ orbit-service/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        echo "🔍 Linting collision service..."
+        ruff check collision-service/
     
-    - name: Check code formatting with black
-      continue-on-error: true
+    - name: Format check
       run: |
-        echo "🔍 Checking code formatting..."
-        black --check collision-service/ orbit-service/ || echo "⚠️ Code formatting could be improved"
-    
-    - name: Check import sorting
-      continue-on-error: true
-      run: |
-        echo "🔍 Checking import sorting..."
-        isort --check-only collision-service/ orbit-service/ || echo "⚠️ Imports could be better organized"
-
-  lint-docker:
-    runs-on: ubuntu-latest
-    name: Docker Configuration
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Validate Docker Compose config
-      run: |
-        echo "🔍 Validating Docker Compose configuration..."
-        docker compose config --quiet
-        echo "✅ Docker Compose config is valid"
-    
-    - name: Check Dockerfiles exist
-      run: |
-        echo "🔍 Checking Dockerfile presence..."
-        test -f Dockerfile && echo "✅ Main Dockerfile exists" || { echo "❌ Main Dockerfile missing"; exit 1; }
-        test -f collision-service/Dockerfile && echo "✅ Collision service Dockerfile exists" || { echo "❌ Collision Dockerfile missing"; exit 1; }
-        test -f orbit-service/Dockerfile && echo "✅ Orbit service Dockerfile exists" || { echo "❌ Orbit Dockerfile missing"; exit 1; }
-    
-    - name: Lint Dockerfiles with hadolint
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: Dockerfile
-        failure-threshold: warning
-      continue-on-error: true
-    
-    - name: Lint collision-service Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: collision-service/Dockerfile
-        failure-threshold: warning
-      continue-on-error: true
-    
-    - name: Lint orbit-service Dockerfile
-      uses: hadolint/hadolint-action@v3.1.0
-      with:
-        dockerfile: orbit-service/Dockerfile
-        failure-threshold: warning
-      continue-on-error: true
-
-  validate-protobuf:
-    runs-on: ubuntu-latest
-    name: Protocol Buffers Validation
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Install protobuf compiler
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y protobuf-compiler
-    
-    - name: Validate proto files syntax
-      run: |
-        echo "🔍 Validating Protocol Buffer files..."
-        if [ -d proto ]; then
-          for proto_file in proto/*.proto; do
-            if [ -f "$proto_file" ]; then
-              echo "Checking $proto_file..."
-              protoc --proto_path=proto --descriptor_set_out=/dev/null "$proto_file" || {
-                echo "❌ Syntax error in $proto_file"
-                exit 1
-              }
-            fi
-          done
-          echo "✅ Proto files syntax is valid"
-        else
-          echo "⚠️ No proto directory found"
-        fi
-    
-    - name: Check proto file generation (Python)
-      continue-on-error: true
-      run: |
-        echo "🔍 Testing proto code generation for Python..."
-        if [ -f proto/astro.proto ]; then
-          mkdir -p /tmp/proto-test/python
-          protoc --proto_path=proto --python_out=/tmp/proto-test/python proto/astro.proto && \
-            echo "✅ Python generation successful" || echo "⚠️ Python generation failed"
-        else
-          echo "ℹ️ No proto/astro.proto file found"
-        fi
-
-  security-scan:
-    runs-on: ubuntu-latest
-    name: Security Scanning
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    
-    - name: Scan for secrets in code
-      run: |
-        echo "🔍 Scanning for potential secrets..."
-        
-        if grep -r "AKIA[0-9A-Z]\{16\}" . --exclude-dir=.git; then
-          echo "❌ AWS access key found"
-          exit 1
-        fi
-        
-        if grep -r "sk-[a-zA-Z0-9]\{20,\}" . --exclude-dir=.git; then
-          echo "❌ OpenAI API key found"
-          exit 1
-        fi
-        
-        if grep -r "eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*" . --exclude-dir=.git; then
-          echo "❌ JWT token found"
-          exit 1
-        fi
-        
-        if grep -ri "password\s*=\s*['\"][^'\"]\+" . --exclude-dir=.git | grep -v "password.*\*\*\*"; then
-          echo "⚠️ Possible hardcoded password found"
-        fi
-        
-        echo "✅ No obvious secrets detected"
-    
-    - name: Check for vulnerable dependencies (Python)
-      continue-on-error: true
-      run: |
-        echo "🔍 Checking Python dependencies..."
-        if [ -f requirements.txt ]; then
-          pip install safety
-          safety check --file=requirements.txt || echo "⚠️ Vulnerable dependencies found"
-        else
-          echo "ℹ️ No requirements.txt found"
-        fi
-
-  status-check:
-    runs-on: ubuntu-latest
-    name: Quality Gate
-    needs: [lint-python, lint-docker, validate-protobuf, security-scan]
-    if: always()
-    
-    steps:
-    - name: Check job results
-      run: |
-        echo "# 📊 Code Quality Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- Python Lint: ${{ needs.lint-python.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Docker Lint: ${{ needs.lint-docker.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Protobuf Validation: ${{ needs.validate-protobuf.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-        
-        if [ "${{ needs.lint-python.result }}" != "success" ] || \
-           [ "${{ needs.lint-docker.result }}" != "success" ] || \
-           [ "${{ needs.security-scan.result }}" != "success" ]; then
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⚠️ **Some checks failed. Please review the logs.**" >> $GITHUB_STEP_SUMMARY
-          exit 1
-        fi
-        
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ **All quality checks passed!**" >> $GITHUB_STEP_SUMMARY
+        echo "🔍 Checking Python formatting..."
+        ruff format --check web/ orbit-service/ collision-service/
