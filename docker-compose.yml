@@ -54,6 +54,7 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
+      target: production
     image: stellartracker-web:latest
     container_name: stellartracker-web
     ports:

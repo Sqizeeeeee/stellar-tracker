@@ -17,11 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY web/ .
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5001
 
 # Production stage
 FROM base as production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "--workers", "4", "--timeout", "120", "app:app"]
 
 # Test stage
 FROM base as test
