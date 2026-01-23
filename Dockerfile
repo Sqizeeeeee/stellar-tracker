@@ -38,7 +38,7 @@ RUN mkdir -p build && cd build && \
 FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \
-    libprotobuf23 libgrpc++1.45 ca-certificates \
+    libprotobuf23 libgrpc++1 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем собранный бинарник
