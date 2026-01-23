@@ -42,6 +42,12 @@ htmlcov/
 # Docker Compose overrides для локальной разработки
 docker-compose.override.yml
 
+# Telegram bot
+telegram-bot/.env
+telegram-bot/venv/
+telegram-bot/__pycache__/
+telegram-bot/**/__pycache__/
+
 # Backups
 backups/
 

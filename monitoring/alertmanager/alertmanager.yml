@@ -7,33 +7,38 @@ route:
   group_wait: 10s
   group_interval: 10s
   repeat_interval: 12h
-  receiver: 'default'
+  receiver: 'telegram'
   routes:
     # Критические алерты - отправляются сразу
     - match:
         severity: critical
-      receiver: 'critical'
+      receiver: 'telegram-critical'
       group_wait: 0s
       repeat_interval: 5m
     
     # Предупреждения - группируются
     - match:
         severity: warning
-      receiver: 'warning'
+      receiver: 'telegram-warning'
       group_wait: 30s
       repeat_interval: 1h
 
 # Receivers (получатели алертов)
 receivers:
-  - name: 'default'
-    # Пока пустой - позже добавим Telegram
-    
-  - name: 'critical'
-    # Критические алерты
-    # Telegram будет добавлен позже
-    
-  - name: 'warning'
-    # Предупреждения
+  - name: 'telegram'
+    webhook_configs:
+      - url: 'http://telegram-bot:8080/webhook/alerts'
+        send_resolved: true
+  
+  - name: 'telegram-critical'
+    webhook_configs:
+      - url: 'http://telegram-bot:8080/webhook/alerts'
+        send_resolved: true
+  
+  - name: 'telegram-warning'
+    webhook_configs:
+      - url: 'http://telegram-bot:8080/webhook/alerts'
+        send_resolved: false
 
 # Подавление алертов (опционально)
 inhibit_rules:

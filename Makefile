@@ -1,134 +1,147 @@
-.PHONY: help up down logs restart clean build
+# =============================================================================
+# StellarTracker Makefile
+# =============================================================================
+
+# Переменные
+COMPOSE = docker compose
+SERVICES = orchestrator orbit-service collision-service web telegram-bot
+MONITORING = prometheus grafana alertmanager loki
+ALL_SERVICES = $(SERVICES) $(MONITORING)
+
+# =============================================================================
+# Основные команды
+# =============================================================================
+
+.PHONY: help up down restart build logs clean
 
 help:
-	@echo "StellarTracker Commands"
-	@echo "======================="
-	@echo "up          - Start all services"
-	@echo "monitoring  - Start with monitoring"
-	@echo "down        - Stop all services"
-	@echo "logs        - View logs"
-	@echo "web-logs    - View web logs only"
-	@echo "restart     - Restart services"
-	@echo "build       - Rebuild images"
-	@echo "clean       - Clean containers & images (keep volumes)"
-	@echo "clean-all   - Clean EVERYTHING including volumes"
-	@echo "rebuild     - Full rebuild (keep volumes)"
-	@echo "status      - Show services status"
-	@echo "health      - Check services health"
+	@echo "🚀 StellarTracker Makefile Commands"
+	@echo ""
+	@echo "📦 Основные команды:"
+	@echo "  make up              - Запустить все сервисы"
+	@echo "  make down            - Остановить все сервисы"
+	@echo "  make restart         - Перезапустить все сервисы"
+	@echo "  make build           - Собрать все образы"
+	@echo "  make logs            - Показать логи всех сервисов"
+	@echo "  make clean           - Остановить и удалить все (включая volumes)"
+	@echo ""
+	@echo "🔄 Групповые команды:"
+	@echo "  make up-all          - Запустить основные сервисы + мониторинг"
+	@echo "  make down-all        - Остановить основные сервисы + мониторинг"
+	@echo "  make restart-all     - Перезапустить основные сервисы + мониторинг"
+	@echo "  make rebuild-all     - Пересобрать основные сервисы + мониторинг"
+	@echo ""
+	@echo "🔄 Управление сервисами (restart-<service>):"
+	@echo "  orchestrator, orbit-service, collision-service, web, telegram-bot"
+	@echo ""
+	@echo "🔨 Пересборка сервисов (rebuild-<service>):"
+	@echo "  orchestrator, orbit-service, collision-service, web, telegram-bot"
+	@echo ""
+	@echo "📋 Логи сервисов (logs-<service>):"
+	@echo "  orchestrator, orbit-service, collision-service, web, telegram-bot"
+	@echo ""
+	@echo "📊 Мониторинг:"
+	@echo "  make monitoring-up         - Запустить мониторинг"
+	@echo "  make monitoring-down       - Остановить мониторинг"
+	@echo "  make monitoring-restart    - Перезапустить мониторинг"
+	@echo "  make logs-prometheus       - Логи Prometheus"
+	@echo "  make logs-grafana          - Логи Grafana"
+	@echo "  make logs-alertmanager     - Логи Alertmanager"
 
 up:
-	docker-compose up -d
-
-monitoring:
-	docker-compose --profile monitoring up -d
+	$(COMPOSE) up -d
 
 down:
-	docker-compose down
-
-logs:
-	docker-compose logs -f
-
-web-logs:
-	docker-compose logs -f web
+	$(COMPOSE) down
 
 restart:
-	docker-compose restart
+	$(COMPOSE) restart
 
 build:
-	docker-compose build
+	$(COMPOSE) build
+
+logs:
+	$(COMPOSE) logs -f
 
 clean:
-	@echo "🧹 Cleaning everything (keeping volumes)..."
-	docker-compose down --rmi all
-	@echo "✅ Done!"
+	$(COMPOSE) down -v
+	@echo "🧹 Очистка завершена"
 
-clean-all:
-	@echo "🧹 Cleaning EVERYTHING including volumes..."
-	docker-compose down -v --rmi all
-	@echo "✅ Done!"
+# =============================================================================
+# Групповые команды для всех сервисов
+# =============================================================================
 
-rebuild:
-	@echo "🔄 Full rebuild from scratch (keeping volumes)..."
-	@make clean
-	@make build
-	@make up
-	@echo "✅ Rebuild complete!"
+.PHONY: up-all down-all restart-all rebuild-all
 
-restart-web:
-	@echo "🔄 Restarting web service (using volume mount - no rebuild needed)..."
-	docker-compose restart web
-	@echo "✅ Web service restarted!"
+up-all:
+	@echo "🚀 Запускаем все сервисы..."
+	$(COMPOSE) up -d $(ALL_SERVICES)
+	@echo "✅ Все сервисы запущены!"
 
-rebuild-web:
-	@echo "🔄 Full rebuild of web service..."
-	docker-compose stop web
-	docker-compose build web
-	docker-compose up -d web
-	@echo "✅ Web service fully rebuilt!"
+down-all:
+	@echo "🛑 Останавливаем все сервисы..."
+	$(COMPOSE) stop $(ALL_SERVICES)
+	@echo "✅ Все сервисы остановлены!"
 
-restart-orchestrator:
-	@echo "🔄 Restarting orchestrator service..."
-	docker-compose restart orchestrator
-	@echo "✅ Orchestrator service restarted!"
+restart-all:
+	@echo "🔄 Перезапускаем все сервисы..."
+	$(COMPOSE) restart $(ALL_SERVICES)
+	@echo "✅ Все сервисы перезапущены!"
 
-rebuild-orchestrator:
-	@echo "🔄 Full rebuild of orchestrator service..."
-	docker-compose stop orchestrator
-	docker-compose build orchestrator
-	docker-compose up -d orchestrator
-	@echo "✅ Orchestrator service fully rebuilt!"
+rebuild-all:
+	@echo "🔨 Пересобираем все сервисы..."
+	$(COMPOSE) build $(SERVICES)
+	$(COMPOSE) up -d $(ALL_SERVICES)
+	@echo "✅ Все сервисы пересобраны и запущены!"
+
+# =============================================================================
+# Управление отдельными сервисами (автогенерация)
+# =============================================================================
+
+# Генерируем команды restart-* для каждого сервиса
+.PHONY: $(addprefix restart-,$(SERVICES))
+$(addprefix restart-,$(SERVICES)): restart-%:
+	$(COMPOSE) restart $*
+
+# Генерируем команды rebuild-* для каждого сервиса
+.PHONY: $(addprefix rebuild-,$(SERVICES))
+$(addprefix rebuild-,$(SERVICES)): rebuild-%:
+	$(COMPOSE) build $*
+	$(COMPOSE) up -d $*
+
+# Генерируем команды logs-* для каждого сервиса
+.PHONY: $(addprefix logs-,$(SERVICES))
+$(addprefix logs-,$(SERVICES)): logs-%:
+	$(COMPOSE) logs -f $*
+
+# =============================================================================
+# Мониторинг
+# =============================================================================
+
+.PHONY: monitoring-up monitoring-down monitoring-restart
+
+monitoring-up:
+	$(COMPOSE) up -d $(MONITORING)
+
+monitoring-down:
+	$(COMPOSE) stop $(MONITORING)
+
+monitoring-restart:
+	$(COMPOSE) restart $(MONITORING)
+
+# Логи мониторинга
+.PHONY: $(addprefix logs-,$(MONITORING))
+$(addprefix logs-,$(MONITORING)): logs-%:
+	$(COMPOSE) logs -f $*
+
+# =============================================================================
+# Дополнительные команды
+# =============================================================================
+
+.PHONY: status ps
 
 status:
-	@echo "📊 Services Status:"
-	@docker-compose ps
+	$(COMPOSE) ps
 
-health:
-	@echo "🏥 Health Check:"
-	@curl -s http://localhost:5001/api/health | python -m json.tool || echo "Web service not responding"
-	@echo ""
-
-debug:
-	@echo "🔍 Debugging Information:"
-	@echo "\n📦 Container Status:"
-	@docker-compose ps
-	@echo "\n📊 Last 50 lines of web logs:"
-	@docker-compose logs --tail=50 web
-	@echo "\n🌐 Network ports:"
-	@docker ps --format "table {{.Names}}\t{{.Ports}}"
-
-shell:
-	@echo "🐚 Opening shell in web container..."
-	docker-compose exec web /bin/sh || docker-compose exec web /bin/bash
-
-test-connection:
-	@echo "🔌 Testing connections..."
-	@echo "Web service root:"
-	@curl -v http://localhost:5001/ 2>&1 | head -20
-	@echo "\n\nAPI health endpoint:"
-	@curl -s http://localhost:5001/api/health 2>&1
-	@echo "\n\nChecking if port 5001 is listening:"
-	@lsof -i :5001 || echo "Port 5001 not in use"
-
-test-endpoints:
-	@echo "🧪 Testing all endpoints..."
-	@echo "\n1️⃣ Root (/):"
-	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:5001/
-	@echo "\n2️⃣ Health (/api/health):"
-	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:5001/api/health
-	@echo "\n3️⃣ Metrics (/metrics):"
-	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:5001/metrics
-	@echo "\n4️⃣ Login (/login):"
-	@curl -s -o /dev/null -w "Status: %{http_code}\n" http://localhost:5001/login
-
-proto-gen:
-	@echo "🔧 Regenerating proto files..."
-	@echo "→ Orchestrator (C++)..."
-	protoc --proto_path=proto --cpp_out=orchestrator/src --grpc_out=orchestrator/src --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` proto/astro.proto
-	@echo "→ Web (Python)..."
-	python -m grpc_tools.protoc -I./proto --python_out=./web/proto --grpc_python_out=./web/proto ./proto/astro.proto
-	@echo "✅ Proto files regenerated!"
-
-test:
-	@echo "🧪 Running tests..."
-	@docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
-	@docker-compose -f docker-compose.test.yml down
+ps:
+	$(COMPOSE) ps

@@ -79,6 +79,31 @@ services:
       - astro-net
     restart: unless-stopped
 
+  # Telegram Bot
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: telegram-bot/Dockerfile
+    image: stellartracker-telegram-bot:latest
+    container_name: stellartracker-telegram-bot
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - PROMETHEUS_URL=http://prometheus:9090
+      - ALERTMANAGER_URL=http://alertmanager:9093
+      - WEBHOOK_HOST=0.0.0.0
+      - WEBHOOK_PORT=8080
+      - WEBHOOK_PATH=/webhook/alerts
+    ports:
+      - "8081:8080"  # Webhook port
+    networks:
+      - monitoring
+      - astro-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - alertmanager
+
   # MongoDB Database
   mongodb:
     image: mongo:7.0

@@ -5,14 +5,14 @@ global:
     cluster: 'stellartracker'
     environment: 'production'
 
-# Alertmanager configuration
+
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']  # ИСПРАВЛЕНО: добавлен реальный target
+        - targets: ['alertmanager:9093']
       timeout: 10s
 
-# Правила алертинга
+
 rule_files:
   - '/etc/prometheus/rules/*.yml'
 
