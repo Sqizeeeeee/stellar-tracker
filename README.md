@@ -3,40 +3,23 @@
 
 # StellarTracker
 
-## Quick Start
+**Track. Analyze. Alert.**
 
-### 1. Clone repository
-```bash
-git clone https://github.com/yourusername/stellartracker.git
-cd stellartracker
-```
+StellarTracker is a microservice-based system for tracking and analyzing orbital objects (asteroids, satellites) with real-time risk assessment and monitoring.
 
-### 2. Setup environment
-```bash
-# Скопировать пример конфигурации
-cp .env.example .env
+![System Overview](about/images/readme.png)
 
-# Сгенерировать SECRET_KEY
-openssl rand -hex 32
+**Key technologies:**
+- **Python (Flask, gRPC):** Web interface, API, microservices communication
+- **MongoDB:** Data storage for users, objects, observations
+- **Orekit (Java via JPype):** Precise orbit determination
+- **Prometheus & Grafana:** Monitoring, metrics, dashboards
+- **Docker Compose:** Deployment and service orchestration
+- **Telegram Bot:** User notifications and quick status access
 
-# Отредактировать .env и заменить пароли
-nano .env
-```
+See [README.systemoverview.md](README.systemoverview.md) for detailed architecture.
 
-### 3. Run locally
-```bash
-make up
-```
 
-## CI/CD Setup
-
-См. [.github/SECRETS.md](.github/SECRETS.md) для настройки GitHub Secrets.
-
-## Development
-
-```bash
-make help  # Показать все команды
-```
 
 </details>
 
@@ -45,39 +28,21 @@ make help  # Показать все команды
 
 # StellarTracker
 
-## Быстрый старт
+**Отслеживай. Анализируй. Предупреждай.**
 
-### 1. Клонировать репозиторий
-```bash
-git clone https://github.com/yourusername/stellartracker.git
-cd stellartracker
-```
+StellarTracker — микросервисная система для отслеживания и анализа орбитальных объектов (астероиды, спутники) с оценкой рисков и мониторингом в реальном времени.
 
-### 2. Настроить окружение
-```bash
-# Скопировать пример конфигурации
-cp .env.example .env
+![Обзор системы](about/images/readme.png)
 
-# Сгенерировать SECRET_KEY
-openssl rand -hex 32
+**Основные технологии:**
+- **Python (Flask, gRPC):** Веб-интерфейс, API, взаимодействие микросервисов
+- **MongoDB:** Хранение данных пользователей, объектов и наблюдений
+- **Orekit (Java через JPype):** Точное определение орбит
+- **Prometheus и Grafana:** Мониторинг, метрики, дашборды
+- **Docker Compose:** Развёртывание и управление сервисами
+- **Telegram-бот:** Оповещения и быстрый доступ к статусу
 
-# Отредактировать .env и заменить пароли
-nano .env
-```
+Подробнее об архитектуре — в [README.systemoverview.md](README.systemoverview.md).
 
-### 3. Запустить локально
-```bash
-make up
-```
-
-## Настройка CI/CD
-
-См. [.github/SECRETS.md](.github/SECRETS.md) для настройки GitHub Secrets.
-
-## Разработка
-
-```bash
-make help  # Показать все команды
-```
 
 </details>
