@@ -1,0 +1,5 @@
+[flake8]
+exclude =
+    */proto/astro_pb2.py,
+    */proto/astro_pb2_grpc.py
+max-line-length = 120
