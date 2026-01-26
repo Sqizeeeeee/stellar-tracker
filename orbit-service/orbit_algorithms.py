@@ -4,7 +4,6 @@ orbit_algorithms.py - Дополнительные алгоритмы опред
 """
 
 import math
-from org.orekit.time import TimeScalesFactory
 from org.orekit.frames import FramesFactory, TopocentricFrame
 from org.orekit.bodies import OneAxisEllipsoid
 from org.orekit.utils import IERSConventions, Constants, PVCoordinates
@@ -186,6 +185,7 @@ def determine_orbit_laplace(observations, observer_position, parse_iso_time_fn, 
     r1 = directions[0].scalarMultiply(estimated_range).add(observer_positions[0])
     r3 = directions[2].scalarMultiply(estimated_range).add(observer_positions[2])
 
+    tau = 1.0  # Определите tau согласно вашей логике
     v2 = r3.subtract(r1).scalarMultiply(1.0 / tau)
 
     pv = PVCoordinates(r2, v2)

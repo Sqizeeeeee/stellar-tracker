@@ -27,7 +27,11 @@ history_collection = db.processing_history
 OBJECTS_CREATED = Counter('objects_created_total', 'Total objects created')
 OBSERVATIONS_SAVED = Counter('observations_saved_total', 'Total observations saved', ['object_name'])
 DB_OPERATIONS = Counter('mongodb_operations_total', 'MongoDB operations', ['collection', 'operation'])
-DB_OPERATION_DURATION = Histogram('mongodb_operation_duration_seconds', 'MongoDB operation duration', ['collection', 'operation'])
+DB_OPERATION_DURATION = Histogram(
+    'mongodb_operation_duration_seconds',
+    'MongoDB operation duration',
+    ['collection', 'operation']
+)
 
 
 def init_db():

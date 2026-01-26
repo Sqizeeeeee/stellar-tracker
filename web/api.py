@@ -137,7 +137,10 @@ def process_observations():
         has_orbit = 'orbit' in [f.name for f in response.DESCRIPTOR.fields]
         has_risk = 'risk' in [f.name for f in response.DESCRIPTOR.fields]
         
-        print(f"✅ Orchestrator response: success={response.success}, error={response.error}", file=sys.stderr, flush=True)
+        print(
+            f"✅ Orchestrator response: success={response.success}, error={response.error}",
+            file=sys.stderr, flush=True
+        )
         print(f"   has_orbit={has_orbit}, has_risk={has_risk}", file=sys.stderr, flush=True)
         
         # Вычисляем время обработки

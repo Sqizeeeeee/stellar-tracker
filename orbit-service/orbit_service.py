@@ -511,6 +511,7 @@ logger = logging.getLogger("orbit-service")
 
 logger.info("orbit_service.py loaded")
 
+
 def serve():
     """Запускает gRPC сервер"""
     start_http_server(8002)
