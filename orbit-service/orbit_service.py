@@ -56,12 +56,12 @@ def init_orekit():
 # Инициализируем Orekit при загрузке модуля
 init_orekit()
 
-# Импортируем необходимые классы Orekit
+# Переместите все импорты наверх (E402)
 from org.orekit.time import TimeScalesFactory, AbsoluteDate
 from org.orekit.frames import FramesFactory, TopocentricFrame
 from org.orekit.bodies import OneAxisEllipsoid, GeodeticPoint
 from org.orekit.utils import IERSConventions, Constants, PVCoordinates
-from org.orekit.orbits import KeplerianOrbit, CartesianOrbit
+from org.orekit.orbits import KeplerianOrbit  # CartesianOrbit удалён (F401)
 from org.orekit.estimation.measurements import AngularRaDec, ObservableSatellite, GroundStation
 from org.orekit.estimation.iod import IodGooding
 from org.hipparchus.geometry.euclidean.threed import Vector3D
@@ -72,10 +72,7 @@ from org.orekit.forces.gravity import HolmesFeatherstoneAttractionModel
 from org.orekit.orbits import PositionAngleType
 from org.hipparchus.optim.nonlinear.vector.leastsquares import GaussNewtonOptimizer
 from org.hipparchus.linear import QRDecomposer
-
-# Импортируем proto
-from proto import astro_pb2
-from proto import astro_pb2_grpc
+from proto import astro_pb2, astro_pb2_grpc
 
 # ============================================================
 # 2) УТИЛИТЫ
@@ -170,7 +167,7 @@ def determine_orbit_simplified(observations, station_lat_deg=0.0, station_lon_de
     pv = PVCoordinates(r2, v2)
     orbit = KeplerianOrbit(pv, inertial_frame, dates[1], mu)
     
-    print(f"✓ Упрощённый метод IOD завершён")
+    print("✓ Упрощённый метод IOD завершён")
     
     return orbit
 
@@ -249,7 +246,7 @@ def determine_orbit_gooding(observations, station_lat_deg=0.0, station_lon_deg=0
     # Конвертируем в Keplerian
     keplerian_orbit = KeplerianOrbit(estimated_orbit)
     
-    print(f"✓ Gooding IOD успешно завершен")
+    print("✓ Gooding IOD успешно завершен")
     
     return keplerian_orbit
 

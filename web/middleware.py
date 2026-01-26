@@ -26,38 +26,37 @@ HTTP_REQUEST_DURATION = Histogram(
 
 def register_middleware(app):
     """Регистрация middleware для приложения"""
-    
+
     @app.before_request
     def before_request():
         """Сохраняем время начала запроса"""
         request.start_time = datetime.now()
-    
+
     @app.after_request
     def after_request(response):
         """Записываем метрики после запроса"""
         if hasattr(request, 'start_time'):
             latency = (datetime.now() - request.start_time).total_seconds()
             endpoint = request.endpoint or 'unknown'
-            
+
             REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
             REQUEST_COUNT.labels(
                 method=request.method,
                 endpoint=endpoint,
                 status=response.status_code
             ).inc()
-            
-            
+
             HTTP_REQUESTS_TOTAL.labels(
                 method=request.method,
                 endpoint=endpoint,
                 status=response.status_code,
                 service='web-service'
             ).inc()
-            
+
             HTTP_REQUEST_DURATION.labels(
                 method=request.method,
                 endpoint=endpoint,
                 service='web-service'
             ).observe(latency)
-            
+
         return response

@@ -174,7 +174,7 @@ def show_db_info():
     
     # Общая статистика
     db_stats = db.command("dbStats")
-    print(f"\n📈 Общая статистика:")
+    print("\n📈 Общая статистика:")
     print(f"   Total size: {db_stats.get('dataSize', 0) / (1024 * 1024):.2f} MB")
     print(f"   Collections: {db_stats.get('collections', 0)}")
     print(f"   Objects: {db_stats.get('objects', 0)}\n")

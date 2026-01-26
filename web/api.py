@@ -1,7 +1,7 @@
 """
 REST API endpoints для StellarTracker
 """
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, Counter, Histogram
 import grpc
@@ -405,7 +405,7 @@ def parse_csv():
                 
             except KeyError as e:
                 errors.append(f"Row {row_num}: Missing column {e}")
-            except ValueError as e:
+            except ValueError:
                 errors.append(f"Row {row_num}: Invalid number format")
         
         if errors and len(observations) == 0:

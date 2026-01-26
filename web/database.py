@@ -124,7 +124,7 @@ class User(UserMixin):
         try:
             user_data = users_collection.find_one({'_id': ObjectId(user_id)})
             return User(user_data) if user_data else None
-        except:
+        except Exception:
             return None
     
     @staticmethod

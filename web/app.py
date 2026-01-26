@@ -3,7 +3,7 @@ Flask веб-интерфейс для StellarTracker
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import grpc
 import sys
 import os

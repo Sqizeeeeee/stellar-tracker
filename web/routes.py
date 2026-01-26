@@ -17,29 +17,28 @@ def index():
     # Получаем статистику
     object_stats = AstroObject.get_stats()
     processing_stats = ProcessingHistory.get_stats()
-    
+
     # Объекты с высоким риском
     high_risk_objects = AstroObject.get_high_risk(limit=5)
-    
+
     # Недавние объекты пользователя
     user_recent = AstroObject.get_by_user(current_user.email, limit=10)
-    
+
     # Популярные объекты
     popular_objects = AstroObject.get_popular(limit=10)
-    
+
     # Общая статистика наблюдений
     total_observations = observations_collection.count_documents({})
-    
+
     print(f"📊 Dashboard stats: objects={object_stats}, processing={processing_stats}")
-    
+
     return render_template('index.html',
-        object_stats=object_stats,
-        processing_stats=processing_stats,
-        high_risk_objects=high_risk_objects,
-        user_recent=user_recent,
-        popular_objects=popular_objects,
-        total_observations=total_observations
-    )
+                           object_stats=object_stats,
+                           processing_stats=processing_stats,
+                           high_risk_objects=high_risk_objects,
+                           user_recent=user_recent,
+                           popular_objects=popular_objects,
+                           total_observations=total_observations)
 
 
 @routes_bp.route('/upload')

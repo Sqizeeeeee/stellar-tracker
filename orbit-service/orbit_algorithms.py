@@ -6,7 +6,7 @@ orbit_algorithms.py - Дополнительные алгоритмы опред
 import math
 from org.orekit.time import TimeScalesFactory
 from org.orekit.frames import FramesFactory, TopocentricFrame
-from org.orekit.bodies import OneAxisEllipsoid, GeodeticPoint
+from org.orekit.bodies import OneAxisEllipsoid
 from org.orekit.utils import IERSConventions, Constants, PVCoordinates
 from org.orekit.orbits import KeplerianOrbit, CartesianOrbit, PositionAngleType
 from org.orekit.propagation.conversion import NumericalPropagatorBuilder, DormandPrince853IntegratorBuilder
@@ -36,7 +36,6 @@ def determine_orbit_batch_ls(observations, observer_position, parse_iso_time_fn,
     if len(observations) < 3:
         raise ValueError("Необходимо минимум 3 наблюдения")
     
-    utc = TimeScalesFactory.getUTC()
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
                             Constants.WGS84_EARTH_FLATTENING,
                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
@@ -163,7 +162,6 @@ def determine_orbit_laplace(observations, observer_position, parse_iso_time_fn, 
     if len(observations) < 3:
         raise ValueError("Необходимо минимум 3 наблюдения")
     
-    utc = TimeScalesFactory.getUTC()
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
                             Constants.WGS84_EARTH_FLATTENING,
                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
@@ -181,10 +179,6 @@ def determine_orbit_laplace(observations, observer_position, parse_iso_time_fn, 
         transform = topo_frame.getTransformTo(inertial_frame, date)
         obs_pv = transform.transformPVCoordinates(PVCoordinates.ZERO)
         observer_positions.append(obs_pv.getPosition())
-    
-    tau1 = dates[0].durationFrom(dates[1])
-    tau3 = dates[2].durationFrom(dates[1])
-    tau = dates[2].durationFrom(dates[0])
     
     estimated_range = 7000000.0  # 7000 км
     

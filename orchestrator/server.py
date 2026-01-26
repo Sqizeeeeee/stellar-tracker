@@ -7,7 +7,6 @@ import logging
 from proto import astro_pb2, astro_pb2_grpc
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 import sys
-import traceback
 
 # Логирование в файл logs/app.log
 LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
@@ -48,6 +47,7 @@ PROCESS_REQUEST_DURATION = Histogram(
     "process_request_duration_seconds", "Process request duration (seconds)"
 )
 ACTIVE_REQUESTS = Gauge("orchestrator_active_requests", "Active gRPC requests in Orchestrator")
+
 
 class OrchestratorService(astro_pb2_grpc.OrchestratorServiceServicer):
     def __init__(self):
@@ -112,6 +112,7 @@ class OrchestratorService(astro_pb2_grpc.OrchestratorServiceServicer):
             PROCESS_REQUEST_DURATION.observe(time.time() - start)
             logger.info("Process duration observed")
 
+
 def serve():
     print("=== [orchestrator] Starting Orchestrator gRPC server... ===", file=sys.stderr, flush=True)
     logger.info("Starting Orchestrator gRPC server...")
@@ -126,6 +127,7 @@ def serve():
     logger.info("Orchestrator started at 0.0.0.0:50051")
     server.start()
     server.wait_for_termination()
+
 
 if __name__ == '__main__':
     serve()
