@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Переопределяем MONGO_URI для локального запуска
 os.environ['MONGO_URI'] = 'mongodb://admin:stellartracker_mongo_admin_2024@localhost:27017/'
 
-from web.database import User, objects_collection, observations_collection, history_collection, db, client
+from database import User, objects_collection, observations_collection, history_collection, db, client
 
 
 def create_user():
@@ -28,7 +28,7 @@ def create_user():
 
 def list_users():
     """Список всех пользователей"""
-    from web.database import users_collection
+    from database import users_collection
     
     print("\n" + "="*60)
     print("👥 Список пользователей")
@@ -205,7 +205,7 @@ def test_connection():
 
 def clear_users():
     """Очистить всех пользователей"""
-    from web.database import users_collection
+    from database import users_collection
     
     print("\n" + "="*60)
     print("⚠️  ВНИМАНИЕ: Удаление ВСЕХ пользователей!")
@@ -222,7 +222,7 @@ def clear_users():
 
 def clear_all_data():
     """Очистить ВСЕ данные (пользователи, объекты, наблюдения, история)"""
-    from web.database import users_collection
+    from database import users_collection
     
     print("\n" + "="*60)
     print("⚠️⚠️⚠️  ВНИМАНИЕ: Удаление ВСЕХ данных из БД!")

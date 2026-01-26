@@ -80,24 +80,9 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"orchestrator\"}",
-          "legendFormat": "🎯 Orchestrator",
+          "expr": "max by(job) (up{job=~\"orchestrator|orbit-service|collision-service|web-service\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
-        },
-        {
-          "expr": "up{job=\"orbit-service\"}",
-          "legendFormat": "🛰️ Orbit Service",
-          "refId": "B"
-        },
-        {
-          "expr": "up{job=\"collision-service\"}",
-          "legendFormat": "💥 Collision Service",
-          "refId": "C"
-        },
-        {
-          "expr": "up{job=\"web-service\"}",
-          "legendFormat": "🌐 Web Service",
-          "refId": "D"
         }
       ]
     },

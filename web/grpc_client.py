@@ -2,8 +2,8 @@
 gRPC client для подключения к сервисам StellarTracker
 """
 import grpc
-from web.proto import astro_pb2, astro_pb2_grpc
-from web.config import get_config
+import astro_pb2_grpc
+from config import get_config
 
 config = get_config()
 
@@ -12,13 +12,11 @@ class GRPCClient:
     """gRPC клиент для взаимодействия с сервисами"""
     
     def __init__(self):
-        """Инициализация gRPC каналов и стабов"""
-        # Создаем каналы
+        print(f"[web] Orchestrator address: {config.orchestrator_address}")
         self.orchestrator_channel = grpc.insecure_channel(config.orchestrator_address)
         self.orbit_channel = grpc.insecure_channel(config.orbit_service_address)
         self.collision_channel = grpc.insecure_channel(config.collision_service_address)
         
-        # Создаем стабы
         self.orchestrator_stub = astro_pb2_grpc.OrchestratorServiceStub(self.orchestrator_channel)
         self.orbit_stub = astro_pb2_grpc.OrbitServiceStub(self.orbit_channel)
         self.collision_stub = astro_pb2_grpc.CollisionServiceStub(self.collision_channel)
@@ -40,6 +38,10 @@ class GRPCClient:
             return 'healthy'
         except:
             return 'unhealthy'
+    
+    def call_orchestrator_process(self, request_msg):
+        print("[web] Calling OrchestratorService.Process...")
+        return self.orchestrator_stub.Process(request_msg, timeout=30.0)
     
     def close(self):
         """Закрытие всех каналов"""

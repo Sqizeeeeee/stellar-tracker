@@ -2,43 +2,29 @@
 Flask веб-интерфейс для StellarTracker
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-try:
-    from flask_socketio import SocketIO, emit
-except ImportError:
-    print("⚠️  flask-socketio не установлен. pip install flask-socketio")
-    raise
-
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import grpc
 import sys
 import os
-from datetime import datetime
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from web.proto import astro_pb2, astro_pb2_grpc
-from web.database import User, AstroObject, Observation, ProcessingHistory
-from web.config import get_config
-from web.grpc_client import grpc_client
-from web.auth import auth_bp
-from web.routes import routes_bp
-from web.api import api_bp
-from web.middleware import register_middleware
+import astro_pb2
+import astro_pb2_grpc
+from database import User, AstroObject, Observation, ProcessingHistory
+from config import get_config
+from grpc_client import grpc_client
+from auth import auth_bp
+from routes import routes_bp
+from api import api_bp
+from middleware import register_middleware
+import logging
 
 # Загружаем конфигурацию
 config = get_config()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = config.SECRET_KEY
-socketio = SocketIO(
-    app, 
-    cors_allowed_origins=config.SOCKETIO_CORS_ALLOWED_ORIGINS,
-    async_mode=config.SOCKETIO_ASYNC_MODE,
-    logger=config.SOCKETIO_LOGGER,
-    engineio_logger=config.SOCKETIO_ENGINEIO_LOGGER,
-    ping_timeout=config.SOCKETIO_PING_TIMEOUT,
-    ping_interval=config.SOCKETIO_PING_INTERVAL
-)
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -64,18 +50,21 @@ def metrics():
     """Prometheus metrics endpoint"""
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
-# WebSocket события
-@socketio.on('connect')
-def handle_connect():
-    """Клиент подключился"""
-    if current_user.is_authenticated:
-        emit('status', {'message': f'Connected as {current_user.username}'})
+LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOGS_DIR, "app.log")
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Клиент отключился"""
-    print('Client disconnected')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(sys.stderr)
+    ]
+)
+logger = logging.getLogger("web")
 
+logger.info("web app.py loaded")
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5001, debug=config.DEBUG)
+    app.run(host='0.0.0.0', port=5001, debug=config.DEBUG)

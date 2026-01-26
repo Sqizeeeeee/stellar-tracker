@@ -3,7 +3,8 @@ Authentication routes для StellarTracker
 """
 from flask import render_template, request, redirect, url_for, flash, Blueprint
 from flask_login import login_user, logout_user, login_required, current_user
-from web.database import User
+import logging
+from database import User
 
 auth_bp = Blueprint('auth', __name__)
 

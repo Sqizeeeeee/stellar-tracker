@@ -14,6 +14,8 @@ import jpype
 import jpype.imports
 from prometheus_client import start_http_server, Counter, Histogram, Gauge
 
+import logging
+
 # ============================================================
 # 1) ИНИЦИАЛИЗАЦИЯ JVM И OREKIT
 # ============================================================
@@ -494,6 +496,23 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
 # ============================================================
 # 5) ЗАПУСК СЕРВИСА
 # ============================================================
+
+# Создаем директорию для логов, если не существует
+LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOGS_DIR, "app.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("orbit-service")
+
+logger.info("orbit_service.py loaded")
 
 def serve():
     """Запускает gRPC сервер"""

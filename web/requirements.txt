@@ -4,3 +4,8 @@ pymongo==4.6.1
 grpcio==1.60.0
 grpcio-tools==1.60.0
 python-dotenv==1.0.0
+flask_socketio
+flask_login
+prometheus_client
+protobuf>=4.21.0
+bcrypt

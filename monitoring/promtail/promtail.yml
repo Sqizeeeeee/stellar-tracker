@@ -9,11 +9,30 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # System logs
-  - job_name: system
+  - job_name: orchestrator
     static_configs:
-      - targets:
-          - localhost
+      - targets: ['localhost']
         labels:
-          job: varlogs
-          __path__: /var/log/*log
+          job: orchestrator
+          __path__: /logs/orchestrator/*.log
+
+  - job_name: web
+    static_configs:
+      - targets: ['localhost']
+        labels:
+          job: web
+          __path__: /logs/web/*.log
+
+  - job_name: orbit-service
+    static_configs:
+      - targets: ['localhost']
+        labels:
+          job: orbit-service
+          __path__: /logs/orbit-service/*.log
+
+  - job_name: collision-service
+    static_configs:
+      - targets: ['localhost']
+        labels:
+          job: collision-service
+          __path__: /logs/collision-service/*.log

@@ -37,7 +37,7 @@ scrape_configs:
         labels:
           service: 'containers'
 
-  # Orchestrator Service (C++)
+  # Orchestrator 
   - job_name: 'orchestrator'
     static_configs:
       - targets: ['orchestrator:8000']

@@ -1,24 +1,21 @@
 services:
   # Основные сервисы приложения
+
   orchestrator:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: stellartracker-orchestrator:latest
-    container_name: orchestrator
-    ports:
-      - "50051:${ORCHESTRATOR_PORT:-50051}"
-      - "${ORCHESTRATOR_METRICS_PORT:-8000}:8000"
+      dockerfile: orchestrator/Dockerfile
     environment:
-      - COLLISION_SERVICE_ADDR=${COLLISION_SERVICE_ADDR:-collision-service:50053}
-      - ORBIT_SERVICE_ADDR=${ORBIT_SERVICE_ADDR:-orbit-service:50052}
+      - ORBIT_SERVICE_ADDR=orbit-service:50052
+      - COLLISION_SERVICE_ADDR=collision-service:50053
+    ports:
+      - "50051:50051"
+      - "8000:8000"
+    depends_on:
+      - orbit-service
+      - collision-service
     networks:
       - astro-net
-      - monitoring
-    depends_on:
-      - collision-service
-      - orbit-service
-    command: ["orchestrator"]
 
   collision-service:
     build:
@@ -214,9 +211,12 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: stellartracker-promtail
-
     volumes:
       - ./monitoring/promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - ./orchestrator/logs:/logs/orchestrator
+      - ./web/logs:/logs/web
+      - ./orbit-service/logs:/logs/orbit-service
+      - ./collision-service/logs:/logs/collision-service
       - /var/log:/var/log:ro
     command: -config.file=/etc/promtail/config.yml
     networks:

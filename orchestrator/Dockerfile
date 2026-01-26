@@ -1,47 +1,45 @@
-FROM ubuntu:22.04 as base
-
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
-    libgrpc++-dev \
-    libprotobuf-dev \
-    protobuf-compiler-grpc \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.10-slim as base
 
 WORKDIR /app
 
-# Copy source code
-COPY . .
+# Установим системные зависимости (если нужны)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Build stage
-FROM base as builder
+# Копируем requirements.txt и устанавливаем зависимости приложения
+COPY orchestrator/requirements.txt .
 
-RUN mkdir -p build && cd build \
-    && cmake .. \
-    && make -j$(nproc)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Обновим protobuf и grpcio-tools до последних версий
+RUN pip install --no-cache-dir --upgrade protobuf grpcio grpcio-tools
+
+# Копируем исходники приложения
+COPY orchestrator/ .
+
+# Копируем proto-файл из корня проекта
+COPY ../proto/astro.proto ./astro.proto
+
+# Создаём proto-пакет и __init__.py
+RUN mkdir -p ./proto && touch ./proto/__init__.py
+
+# Сгенерировать proto-файлы прямо в proto-пакет
+RUN python -m grpc_tools.protoc -I. --python_out=./proto --grpc_python_out=./proto ./astro.proto
+
+# Expose ports
+EXPOSE 50051
+EXPOSE 8000
+
+# Добавляем PYTHONPATH для корректного импорта
+ENV PYTHONPATH=/app:/app/proto
 
 # Production stage
-FROM ubuntu:22.04 as production
-
-RUN apt-get update && apt-get install -y \
-    libgrpc++1.45 \
-    libprotobuf23 \
-    && rm -rf /var/lib/apt/lists/*
+FROM base as production
 
 WORKDIR /app
 
-COPY --from=builder /app/build/orchestrator /app/orchestrator
+# Явно выводим содержимое директории для отладки (можно удалить после диагностики)
+RUN ls -l /app
 
-EXPOSE 50051
-
-CMD ["./orchestrator"]
-
-# Test stage
-FROM builder as test
-
-RUN apt-get update && apt-get install -y \
-    && rm -rf /var/lib/apt/lists/*
-
-CMD ["ctest", "--output-on-failure"]
+CMD ["python", "server.py"]

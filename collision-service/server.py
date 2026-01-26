@@ -3,9 +3,28 @@ from concurrent import futures
 import time
 import math
 from prometheus_client import start_http_server, Counter, Histogram, Gauge
+import logging
+import os
 
 # Импортируем сгенерированные файлы
 from proto import astro_pb2, astro_pb2_grpc
+
+# Настройка логирования
+LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOGS_DIR, "app.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("collision-service")
+
+logger.info("collision-service server.py loaded")
 
 # Prometheus метрики
 RISK_ASSESSMENTS = Counter('risk_assessments_total', 'Total risk assessments performed')

@@ -75,24 +75,27 @@ clean:
 
 up-all:
 	@echo "🚀 Запускаем все сервисы..."
-	$(COMPOSE) up -d $(ALL_SERVICES)
-	@echo "✅ Все сервисы запущены!"
+	docker compose up -d orchestrator orbit-service collision-service web telegram-bot prometheus grafana alertmanager loki cadvisor node-exporter mongodb promtail
 
 down-all:
 	@echo "🛑 Останавливаем все сервисы..."
-	$(COMPOSE) stop $(ALL_SERVICES)
-	@echo "✅ Все сервисы остановлены!"
+	docker compose down
+
+logs-all:
+	@echo "📋 Логи всех сервисов..."
+	docker compose logs -f orchestrator orbit-service collision-service web telegram-bot prometheus grafana alertmanager loki cadvisor node-exporter mongodb promtail
 
 restart-all:
 	@echo "🔄 Перезапускаем все сервисы..."
-	$(COMPOSE) restart $(ALL_SERVICES)
-	@echo "✅ Все сервисы перезапущены!"
+	docker compose restart orchestrator orbit-service collision-service web telegram-bot prometheus grafana alertmanager loki cadvisor node-exporter mongodb promtail
 
-rebuild-all:
+ps-all:
+	@echo "📦 Статус всех сервисов..."
+	docker compose ps
+
+build-all:
 	@echo "🔨 Пересобираем все сервисы..."
-	$(COMPOSE) build $(SERVICES)
-	$(COMPOSE) up -d $(ALL_SERVICES)
-	@echo "✅ Все сервисы пересобраны и запущены!"
+	docker compose build
 
 # =============================================================================
 # Управление отдельными сервисами (автогенерация)
@@ -145,3 +148,5 @@ status:
 
 ps:
 	$(COMPOSE) ps
+
+

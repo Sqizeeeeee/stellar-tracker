@@ -10,9 +10,9 @@ import io
 import sys
 from datetime import datetime
 
-from web.proto import astro_pb2
-from web.database import AstroObject, Observation, ProcessingHistory
-from web.grpc_client import grpc_client
+import astro_pb2
+from database import AstroObject, Observation, ProcessingHistory
+from grpc_client import grpc_client
 
 # Prometheus метрики для пользовательских событий
 USER_EVENTS = Counter(
@@ -131,9 +131,7 @@ def process_observations():
             object_name=data['object_name'],
             observations=observations
         )
-        
-        # Отправляем в Orchestrator
-        response = grpc_client.orchestrator_stub.Process(request_msg, timeout=30.0)
+        response = grpc_client.call_orchestrator_process(request_msg)
         
         # Проверяем что ответ содержит нужные поля
         has_orbit = 'orbit' in [f.name for f in response.DESCRIPTOR.fields]
@@ -175,7 +173,7 @@ def process_observations():
                         'e': response.orbit.e,
                         'i_deg': response.orbit.i_deg,
                         'omega_deg': response.orbit.omega_deg,
-                        'big_omega_deg': response.orbit.big_mega_deg,
+                        'big_mega_deg': response.orbit.big_mega_deg,
                         'm_deg': response.orbit.m_deg,
                         'epoch': response.orbit.epoch
                     },
@@ -216,15 +214,6 @@ def process_observations():
                 processing_time=processing_time,
                 created_by_email=user_email
             )
-            
-            # Отправляем real-time обновление через WebSocket
-            from web.app import socketio
-            socketio.emit('new_object', {
-                'object_name': data['object_name'],
-                'risk_level': response.risk.risk_level if response.risk else 'unknown',
-                'moid': response.risk.moid_earth_au if response.risk else None,
-                'timestamp': datetime.now().isoformat()
-            })
         else:
             # Сохраняем историю ошибки
             user_email = current_user.email if current_user.is_authenticated else 'anonymous'
@@ -245,7 +234,7 @@ def process_observations():
                 'e': response.orbit.e,
                 'i_deg': response.orbit.i_deg,
                 'omega_deg': response.orbit.omega_deg,
-                'big_omega_deg': response.orbit.big_mega_deg,
+                'big_mega_deg': response.orbit.big_mega_deg,
                 'm_deg': response.orbit.m_deg,
                 'epoch': response.orbit.epoch
             } if has_orbit else None,
@@ -278,7 +267,7 @@ def process_observations():
 
 
 @api_bp.route('/orbit/calculate', methods=['POST'])
-@login_required  # РАСКОММЕНТИРОВАНО
+@login_required
 def calculate_orbit():
     """Расчет орбиты по наблюдениям"""
     try:
@@ -310,7 +299,7 @@ def calculate_orbit():
                 'e': response.orbit.e,
                 'i_deg': response.orbit.i_deg,
                 'omega_deg': response.orbit.omega_deg,
-                'big_omega_deg': response.orbit.big_mega_deg,  # ИСПРАВЛЕНО: читаем big_mega_deg из proto
+                'big_mega_deg': response.orbit.big_mega_deg,
                 'm_deg': response.orbit.m_deg,
                 'epoch': response.orbit.epoch
             } if response.success and response.orbit else None
@@ -333,7 +322,7 @@ def assess_collision():
             e=float(data['e']),
             i_deg=float(data['i_deg']),
             omega_deg=float(data['omega_deg']),
-            big_mega_deg=float(data['big_omega_deg']),
+            big_mega_deg=float(data['big_mega_deg']),
             m_deg=float(data['m_deg']),
             epoch=data['epoch']
         )

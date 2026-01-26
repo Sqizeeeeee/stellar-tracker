@@ -1,10 +1,10 @@
 """
 HTML страницы для StellarTracker
 """
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify, request
 from flask_login import login_required, current_user
-from web.config import get_config
-from web.database import AstroObject, ProcessingHistory, observations_collection
+from config import get_config
+from database import AstroObject, serialize_mongo_object, ProcessingHistory, observations_collection
 
 routes_bp = Blueprint('routes', __name__)
 config = get_config()
@@ -61,3 +61,26 @@ def objects_page():
 def monitoring_page():
     """Страница мониторинга системы"""
     return render_template('monitoring.html')
+
+
+@routes_bp.route('/api/objects/recent')
+@login_required
+def get_recent_objects():
+    """Получить последние объекты (для polling)"""
+    limit = int(request.args.get('limit', 5))
+    objects = AstroObject.find_all(limit=limit)
+    return jsonify({
+        'success': True,
+        'objects': [serialize_mongo_object(obj) for obj in objects]
+    })
+
+
+@routes_bp.route('/api/objects/stats')
+@login_required
+def get_objects_stats():
+    """Получить статистику по объектам (для polling)"""
+    stats = AstroObject.get_stats()
+    return jsonify({
+        'success': True,
+        'stats': stats
+    })
