@@ -14,12 +14,10 @@ StellarTracker is a microservice-based system for tracking and analyzing orbital
 - **MongoDB:** Data storage for users, objects, observations
 - **Orekit (Java via JPype):** Precise orbit determination
 - **Prometheus & Grafana:** Monitoring, metrics, dashboards
-- **Docker Compose:** Deployment and service orchestration
+- **Docker:** Deployment and service orchestration
 - **Telegram Bot:** User notifications and quick status access
 
-See [README.systemoverview.md](README.systemoverview.md) for detailed architecture.
-
-
+See [about/README.systemoverview.md](about/README.systemoverview.md) for detailed architecture.
 
 </details>
 
@@ -39,10 +37,9 @@ StellarTracker — микросервисная система для отсле
 - **MongoDB:** Хранение данных пользователей, объектов и наблюдений
 - **Orekit (Java через JPype):** Точное определение орбит
 - **Prometheus и Grafana:** Мониторинг, метрики, дашборды
-- **Docker Compose:** Развёртывание и управление сервисами
-- **Telegram-бот:** Оповещения и быстрый доступ к статусу
+- **Docker:** Развёртывание и управление сервисами
+- **Telegram-бот:** Оповещения пользователей и быстрый доступ к статусу
 
-Подробнее об архитектуре — в [README.systemoverview.md](README.systemoverview.md).
-
+Подробнее об архитектуре — в [about/README.systemoverview.md](about/README.systemoverview.md).
 
 </details>
