@@ -61,7 +61,7 @@ from org.orekit.time import TimeScalesFactory, AbsoluteDate
 from org.orekit.frames import FramesFactory, TopocentricFrame
 from org.orekit.bodies import OneAxisEllipsoid, GeodeticPoint
 from org.orekit.utils import IERSConventions, Constants, PVCoordinates
-from org.orekit.orbits import KeplerianOrbit  # CartesianOrbit удалён (F401)
+from org.orekit.orbits import KeplerianOrbit  # CartesianOrbit удалён
 from org.orekit.estimation.measurements import AngularRaDec, ObservableSatellite, GroundStation
 from org.orekit.estimation.iod import IodGooding
 from org.hipparchus.geometry.euclidean.threed import Vector3D
@@ -396,7 +396,7 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
                             station_lat = float(parts[0])
                             station_lon = float(parts[1])
                             station_alt = float(parts[2])
-                    except:
+                    except Exception:
                         pass
                 
                 orbit = None

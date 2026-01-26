@@ -9,7 +9,6 @@ from datetime import datetime
 REQUEST_COUNT = Counter('web_requests_total', 'Total web requests', ['method', 'endpoint', 'status'])
 REQUEST_LATENCY = Histogram('web_request_duration_seconds', 'Request latency', ['endpoint'])
 
-
 HTTP_REQUESTS_TOTAL = Counter(
     'http_requests_total',
     'Total HTTP requests',

@@ -1,6 +1,7 @@
 """
 Командный интерфейс для управления пользователями StellarTracker
 """
+
 import sys
 import os
 

@@ -20,14 +20,6 @@ class Config:
     COLLISION_SERVICE_HOST = os.getenv('COLLISION_SERVICE_HOST', 'localhost')
     COLLISION_SERVICE_PORT = os.getenv('COLLISION_SERVICE_PORT', '50053')
 
-    # SocketIO
-    SOCKETIO_CORS_ALLOWED_ORIGINS = "*"
-    SOCKETIO_ASYNC_MODE = 'eventlet'
-    SOCKETIO_LOGGER = True
-    SOCKETIO_ENGINEIO_LOGGER = False
-    SOCKETIO_PING_TIMEOUT = 60
-    SOCKETIO_PING_INTERVAL = 25
-
     # Flask-Login
     LOGIN_VIEW = 'auth.login'
     LOGIN_MESSAGE = 'Please log in to access this page.'

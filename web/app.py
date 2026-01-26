@@ -1,6 +1,7 @@
 """
 Flask веб-интерфейс для StellarTracker
 """
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -32,9 +33,11 @@ login_manager.init_app(app)
 login_manager.login_view = config.LOGIN_VIEW
 login_manager.login_message = config.LOGIN_MESSAGE
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.find_by_id(user_id)
+
 
 # Регистрируем Blueprints
 app.register_blueprint(auth_bp)
@@ -43,6 +46,7 @@ app.register_blueprint(api_bp)
 
 # Регистрируем middleware
 register_middleware(app)
+
 
 # Metrics endpoint для Prometheus (корневой путь для совместимости)
 @app.route('/metrics')
