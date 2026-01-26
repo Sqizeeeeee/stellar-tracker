@@ -2,7 +2,6 @@
 
 Orbit Service — это специализированный микросервис для вычисления орбитальных элементов по наблюдениям. Он реализован с использованием Python и библиотеки Orekit (через JPype), что обеспечивает высокую точность и поддержку современных астродинамических алгоритмов.
 
-![Orbit Service Interface](images/orbit_service.png)
 
 ---
 
@@ -70,7 +69,7 @@ Orchestrator отправляет три и более наблюдений, Orb
 ## Дополнительная информация
 
 - Подробности по запуску и настройке — в [README.start.md](../README.start.md)
-- Описание архитектуры всей системы — в [README.systemoverview.md](../about/README.systemoverview.md)
+- Описание архитектуры всей системы — в [README.systemoverview.md](README.systemoverview.md)
 - Мониторинг и метрики — в [README.monitoring.md](../README.monitoring.md)
 
 ---
@@ -79,7 +78,6 @@ Orchestrator отправляет три и более наблюдений, Orb
 
 Orbit Service is a specialized microservice for calculating orbital elements from observations. It is implemented in Python using the Orekit library (via JPype), providing high accuracy and support for modern astrodynamics algorithms.
 
-![Orbit Service Interface](images/orbit_service.png)
 
 ---
 
@@ -146,6 +144,6 @@ The Orchestrator sends three or more observations, Orbit Service computes the or
 
 ## Additional Information
 
-- For details on launch and configuration, see [README.start.md](../README.start.md)
-- For overall system architecture, see [README.systemoverview.md](../about/README.systemoverview.md)
-- For monitoring and metrics, see [README.monitoring.md](../README.monitoring.md)
+- For details on launch and configuration, see [README.start.md](README.start.md)
+- For overall system architecture, see [README.systemoverview.md](README.systemoverview.md)
+- For monitoring and metrics, see [README.monitoring.md](README.monitoring.md)

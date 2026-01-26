@@ -69,9 +69,9 @@ Orchestrator отправляет орбитальные элементы объ
 
 ## Дополнительная информация
 
-- Подробности по запуску и настройке — в [README.start.md](../README.start.md)
+- Подробности по запуску и настройке — в [README.start.md](README.start.md)
 - Описание архитектуры всей системы — в [README.systemoverview.md](README.systemoverview.md)
-- Мониторинг и метрики — в [README.monitoring.md](../README.monitoring.md)
+- Мониторинг и метрики — в [README.monitoring.md](README.monitoring.md)
 
 ---
 
@@ -145,6 +145,6 @@ The Orchestrator sends an object's orbital elements, Collision Service calculate
 
 ## Additional Information
 
-- For details on launch and configuration, see [README.start.md](../README.start.md)
+- For details on launch and configuration, see [README.start.md](README.start.md)
 - For overall system architecture, see [README.systemoverview.md](README.systemoverview.md)
-- For monitoring and metrics, see [README.monitoring.md](../README.monitoring.md)
+- For monitoring and metrics, see [README.monitoring.md](README.monitoring.md)

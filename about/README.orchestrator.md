@@ -87,8 +87,8 @@ Orchestrator получает пакет наблюдений, вызывает 
 ## Дополнительная информация
 
 - Подробности по запуску и настройке — в [README.start.md](../README.start.md)
-- Описание архитектуры всей системы — в [README.systemoverview.md](../about/README.systemoverview.md)
-- Мониторинг и метрики — в [README.monitoring.md](../README.monitoring.md)
+- Описание архитектуры всей системы — в [README.systemoverview.md](README.systemoverview.md)
+- Мониторинг и метрики — в [README.monitoring.md](README.monitoring.md)
 
 ---
 
@@ -182,4 +182,4 @@ The Orchestrator receives a batch of observations, calls the Orbit Service for o
 
 - For details on launch and configuration, see [README.start.md](../README.start.md)
 - For overall system architecture, see [README.systemoverview.](README.systemoverview.md)
-- For monitoring and metrics, see [README.monitoring.md](../README.monitoring.md)
+- For monitoring and metrics, see [README.monitoring.md](README.monitoring.md)
