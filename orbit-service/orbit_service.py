@@ -56,12 +56,12 @@ def init_orekit():
 # Инициализируем Orekit при загрузке модуля
 init_orekit()
 
-# Переместите все импорты наверх (E402)
+
 from org.orekit.time import TimeScalesFactory, AbsoluteDate
 from org.orekit.frames import FramesFactory, TopocentricFrame
 from org.orekit.bodies import OneAxisEllipsoid, GeodeticPoint
 from org.orekit.utils import IERSConventions, Constants, PVCoordinates
-from org.orekit.orbits import KeplerianOrbit  # CartesianOrbit удалён
+from org.orekit.orbits import KeplerianOrbit
 from org.orekit.estimation.measurements import AngularRaDec, ObservableSatellite, GroundStation
 from org.orekit.estimation.iod import IodGooding
 from org.hipparchus.geometry.euclidean.threed import Vector3D
@@ -122,7 +122,6 @@ def determine_orbit_simplified(observations, station_lat_deg=0.0, station_lon_de
     if len(observations) < 3:
         raise ValueError("Необходимо минимум 3 наблюдения")
     
-    utc = TimeScalesFactory.getUTC()
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
                             Constants.WGS84_EARTH_FLATTENING,
                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
@@ -188,7 +187,6 @@ def determine_orbit_gooding(observations, station_lat_deg=0.0, station_lon_deg=0
     if len(observations) < 3:
         raise ValueError("Необходимо минимум 3 наблюдения")
     
-    utc = TimeScalesFactory.getUTC()
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
                             Constants.WGS84_EARTH_FLATTENING,
                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
@@ -258,7 +256,6 @@ def determine_orbit_batch_least_squares(observations, station_lat_deg=0.0, stati
     if len(observations) < 3:
         raise ValueError("Необходимо минимум 3 наблюдения")
     
-    utc = TimeScalesFactory.getUTC()
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
                             Constants.WGS84_EARTH_FLATTENING,
                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
@@ -418,7 +415,9 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
                     # Проверяем реалистичность
                     altitude_km = (orbit.getA() / 1000.0) - 6371
                     if altitude_km < 100 or altitude_km > 100000 or orbit.getE() >= 1.0:
-                        print(f"   ⚠️ Batch LS дал нереалистичную орбиту (h={altitude_km:.0f} км, e={orbit.getE():.6f})")
+                        print(
+                            f"   ⚠️ Batch LS дал нереалистичную орбиту (h={altitude_km:.0f} км, e={orbit.getE():.6f})"
+                        )
                         raise ValueError("Unrealistic orbit from Batch LS")
                         
                 except Exception as e:
@@ -459,7 +458,10 @@ class OrbitServiceServicer(astro_pb2_grpc.OrbitServiceServicer):
                 epoch = str(orbit.getDate().toString())
                 
                 altitude_km = (orbit.getA() / 1000.0) - 6371
-                print(f"✓ Орбита вычислена ({method_used}): a={orbit.getA()/1000:.1f} km, e={e:.6f}, i={i_deg:.2f}°, высота={altitude_km:.0f} км")
+                print(
+                    f"✓ Орбита вычислена ({method_used}): a={orbit.getA()/1000:.1f} km, "
+                    f"e={e:.6f}, i={i_deg:.2f}°, высота={altitude_km:.0f} км"
+                )
                 
                 return astro_pb2.OrbitResponse(
                     request_id=request.request_id,

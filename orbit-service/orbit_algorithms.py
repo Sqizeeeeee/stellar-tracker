@@ -36,8 +36,8 @@ def determine_orbit_batch_ls(observations, observer_position, parse_iso_time_fn,
         raise ValueError("Необходимо минимум 3 наблюдения")
 
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-                            Constants.WGS84_EARTH_FLATTENING,
-                            FramesFactory.getITRF(IERSConventions.IERS_2010, True))
+                             Constants.WGS84_EARTH_FLATTENING,
+                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
 
     inertial_frame = FramesFactory.getEME2000()
     mu = Constants.EGM96_EARTH_MU
@@ -162,8 +162,8 @@ def determine_orbit_laplace(observations, observer_position, parse_iso_time_fn, 
         raise ValueError("Необходимо минимум 3 наблюдения")
 
     earth = OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-                            Constants.WGS84_EARTH_FLATTENING,
-                            FramesFactory.getITRF(IERSConventions.IERS_2010, True))
+                             Constants.WGS84_EARTH_FLATTENING,
+                             FramesFactory.getITRF(IERSConventions.IERS_2010, True))
 
     inertial_frame = FramesFactory.getEME2000()
 

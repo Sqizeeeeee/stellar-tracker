@@ -15,35 +15,25 @@ from database import AstroObject, Observation, ProcessingHistory
 from grpc_client import grpc_client
 
 # Prometheus метрики для пользовательских событий
-USER_EVENTS = Counter(
-    'user_events_total', 
-    'User frontend events', 
-    ['event_name', 'user']
+USER_EVENTS_TOTAL = Counter(
+    'user_events_total',
+    'User frontend events'
 )
-
 CSV_PARSE_OPERATIONS = Counter(
-    'csv_parse_operations_total', 
-    'CSV parse operations', 
-    ['method', 'status']
+    'csv_parse_operations_total',
+    'CSV parse operations'
 )
-
 CSV_PARSE_DURATION = Histogram(
-    'csv_parse_duration_seconds', 
-    'CSV parse duration', 
-    ['method'],
-    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10)
+    'csv_parse_duration_seconds',
+    'CSV parse duration'
 )
-
 PROCESSING_OPERATIONS = Counter(
-    'processing_operations_total', 
-    'Processing operations', 
-    ['status']
+    'processing_operations_total',
+    'Processing operations'
 )
-
 PROCESSING_DURATION = Histogram(
-    'processing_duration_seconds', 
-    'Processing duration',
-    buckets=(0.1, 0.5, 1, 2, 5, 10, 30, 60)
+    'processing_duration_seconds',
+    'Processing duration'
 )
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')

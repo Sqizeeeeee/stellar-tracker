@@ -237,7 +237,7 @@ def clear_all_data():
         obs_del = observations_collection.delete_many({})
         hist_del = history_collection.delete_many({})
         
-        print(f"\n✅ Удалено:")
+        print("\n✅ Удалено:")
         print(f"   Пользователей: {users_del.deleted_count}")
         print(f"   Объектов: {objects_del.deleted_count}")
         print(f"   Наблюдений: {obs_del.deleted_count}")
