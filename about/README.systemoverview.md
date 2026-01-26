@@ -2,7 +2,7 @@
 
 StellarTracker is a distributed system for tracking, analyzing, and assessing the risks of orbital objects. The architecture is based on microservices, each responsible for a specific part of the workflow.
 
-![System Overview](about/images/readme.png)
+![System Overview](images/readme.png)
 
 ---
 
@@ -51,11 +51,10 @@ StellarTracker is a distributed system for tracking, analyzing, and assessing th
 ## Learn More
 
 - For details on each microservice, see their respective README files:
-  - [orchestrator/README.md](orchestrator/README.md)
-  - [orbit-service/README.md](orbit-service/README.md)
-  - [collision-service/README.md](collision-service/README.md)
-  - [web/README.md](web/README.md)
-  - [telegram-bot/README.md](telegram-bot/README.md)
+  - [orchestrator](README.orchestrator.md)
+  - [orbit-service](README.orbit-service.md)
+  - [collision-service](collision-service/README.md)
+  - [web](README.web.md)
 
 - For deployment and startup instructions, see [README.start.md](README.start.md).
 - For monitoring and logging, see [README.monitoring.md](README.monitoring.md).
@@ -66,7 +65,7 @@ StellarTracker is a distributed system for tracking, analyzing, and assessing th
 
 StellarTracker — это распределённая система для отслеживания, анализа и оценки рисков орбитальных объектов. Архитектура построена на микросервисах, каждый из которых отвечает за свою часть обработки.
 
-![Обзор системы](about/images/readme.png)
+![Обзор системы](images/readme.png)
 
 ---
 
@@ -115,11 +114,10 @@ StellarTracker — это распределённая система для о�
 ## Подробнее
 
 - Подробнее о каждом микросервисе — в их отдельных README:
-  - [orchestrator/README.md](orchestrator/README.md)
-  - [orbit-service/README.md](orbit-service/README.md)
-  - [collision-service/README.md](collision-service/README.md)
-  - [web/README.md](web/README.md)
-  - [telegram-bot/README.md](telegram-bot/README.md)
+  - [orchestrator](orchestrator/README.md)
+  - [orbit-service](orbit-service/README.md)
+  - [collision-service](collision-service/README.md)
+  - [web](README.web.md)
 
 - Инструкции по запуску и развёртыванию: [README.start.md](README.start.md).
 - Мониторинг и логирование: [README.monitoring.md](README.monitoring.md).

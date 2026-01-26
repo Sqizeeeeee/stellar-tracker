@@ -1,179 +1,67 @@
-# 📊 StellarTracker Monitoring Setup
+# Обзор системы мониторинга StellarTracker
 
-## Обзор
+Система мониторинга StellarTracker позволяет отслеживать состояние всех сервисов, собирать метрики, логи и своевременно реагировать на сбои. В основе лежат Prometheus, Grafana, Loki и другие современные инструменты.
 
-Стек мониторинга включает:
-- **Prometheus** - сбор метрик
-- **Grafana** - визуализация данных
-- **Loki** - агрегация логов
-- **Promtail** - сбор логов
-- **Node Exporter** - системные метрики
-- **cAdvisor** - метрики контейнеров
+---
 
-## Быстрый старт
+## Статус сервисов
 
-### 1. Запуск только приложения (без мониторинга)
+Дашборд отображает текущее состояние всех основных микросервисов системы (web, orchestrator, orbit-service, collision-service). Если сервис работает корректно, его статус — **UP** (зелёный индикатор).
 
-```bash
-# Запустить основные сервисы
-docker compose up -d
+![Сервис статус — все сервисы UP](images/1.png)
 
-# Проверить статус
-docker compose ps
-```
+---
 
-### 2. Запуск с мониторингом
+## Использование ресурсов
 
-```bash
-# Запустить все сервисы включая мониторинг
-docker compose --profile monitoring up -d
+Графики показывают загрузку CPU и использование памяти каждым сервисом в системе. Это позволяет быстро выявлять "узкие места" и контролировать нагрузку на инфраструктуру.
 
-# Или явно указать профили
-docker compose --profile monitoring up -d
+![Использование CPU и памяти по сервисам](images/2.png)
+![Использование сети](images/3.png)
 
-# Проверить все запущенные сервисы
-docker compose --profile monitoring ps
-```
+---
 
-### 3. Остановка сервисов
 
-```bash
-# Остановить только основные сервисы
-docker compose down
+![Использование CPU и памяти по сервисам](images/2.png)
+![Использование сети](images/3.png)
 
-# Остановить все включая мониторинг
-docker compose --profile monitoring down
+---
 
-# Остановить и удалить volumes
-docker compose --profile monitoring down -v
-```
+## Активность пользователей
 
-### 4. Доступ к интерфейсам
+Данный раздел дашборда отображает основные пользовательские события (например, загрузка и парсинг CSV, запуск обработки, переключение вкладок) и операции парсинга CSV на клиенте и сервере. Это помогает анализировать поведение пользователей и выявлять возможные проблемы с загрузкой данных.
 
-- **Grafana**: http://localhost:3000
-  - Логин: `admin`
-  - Пароль: `stellartracker_admin` (или из переменной `GRAFANA_PASSWORD`)
-  
-- **Prometheus**: http://localhost:9090
-- **Loki**: http://localhost:3100
-- **cAdvisor**: http://localhost:8080
+![User Activity — события](images/4.png)
 
-## Структура файлов
+---
 
-```
-monitoring/
-├── prometheus/
-│   ├── prometheus.yml      # Основная конфигурация
-│   └── rules/
-│       └── alerts.yml      # Правила алертинга
-├── promtail/
-│   └── promtail.yml        # Конфигурация сбора логов
-└── grafana/
-    ├── datasources.yml     # Источники данных
-    └── dashboards.yml      # Конфигурация дашбордов
-```
+# StellarTracker Monitoring System Overview
 
-## Метрики
+The StellarTracker monitoring system enables tracking the status of all services, collecting metrics and logs, and responding promptly to failures. It is based on Prometheus, Grafana, Loki, and other modern tools.
 
-### Стандартные метрики приложений:
-- `http_requests_total` - количество HTTP запросов
-- `http_request_duration_seconds` - время обработки запросов
-- `process_cpu_seconds_total` - использование CPU
-- `process_resident_memory_bytes` - использование памяти
+---
 
-### Метрики collision-service:
-- `collision_detection_duration_seconds` - время детекции столкновений
-- `collision_checks_total` - количество проверок столкновений
-- `satellites_tracked` - количество отслеживаемых спутников
+## Service Status
 
-## Алерты
+The dashboard displays the current status of all main microservices in the system (web, orchestrator, orbit-service, collision-service). If a service is operating correctly, its status is **UP** (green indicator).
 
-Настроены следующие алерты:
-- **HighCPUUsage** - CPU выше 80% более 5 минут
-- **HighMemoryUsage** - память выше 1GB
-- **ServiceDown** - сервис недоступен более 1 минуты
-- **HighErrorRate** - частота ошибок выше 5%
-- **SlowAPIResponse** - 95-й перцентиль времени ответа выше 1с
+![Service status — all services UP](images/1.png)
 
-## Рекомендуемые дашборды Grafana
+---
 
-Импортируйте следующие дашборды по ID:
-- **1860** - Node Exporter Full
-- **893** - Docker and System Monitoring
-- **7362** - PostgreSQL Database
-- **13639** - Loki & Promtail
+## Resource Usage
 
-## Troubleshooting
+Charts show CPU load and memory usage for each service in the system. This allows you to quickly identify bottlenecks and control infrastructure load.
 
-### Prometheus не видит таргеты
-```bash
-# Проверьте конфигурацию
-docker compose -f docker-compose.monitoring.yml exec prometheus promtool check config /etc/prometheus/prometheus.yml
+![CPU and memory usage by service](images/2.png)
+![Network usage](images/3.png)
 
-# Проверьте логи
-docker compose -f docker-compose.monitoring.yml logs prometheus
-```
 
-### Promtail не собирает логи
-```bash
-# Проверьте права доступа к Docker socket
-docker compose -f docker-compose.monitoring.yml logs promtail
-```
+---
 
-### Grafana не показывает данные
-```bash
-# Проверьте подключение к Prometheus
-curl http://localhost:9090/api/v1/query?query=up
+## User Activity
 
-# Проверьте datasources в Grafana
-curl -u admin:stellartracker_admin http://localhost:3000/api/datasources
-```
+This dashboard section displays key user events (such as CSV upload and parsing, processing start, tab switching) and CSV parsing operations on the client and server. This helps analyze user behavior and identify possible issues with data uploads.
 
-## Масштабирование
+![User Activity — events](images/4.png)
 
-Для production окружения:
-1. Настройте retention для Prometheus (по умолчанию 15 дней)
-2. Используйте внешнее хранилище для Grafana дашбордов
-3. Настройте Alertmanager для отправки уведомлений
-4. Используйте remote storage для долгосрочного хранения метрик
-
-## Безопасность
-
-⚠️ **Важно**: Измените дефолтные пароли перед production deployment!
-
-```yaml
-# В docker-compose.monitoring.yml
-environment:
-  - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-```
-
-## Переменные окружения
-
-Создайте файл `.env` для настройки:
-
-```env
-# Grafana
-GRAFANA_PASSWORD=your_secure_password
-
-# Другие настройки
-COLLISION_SERVICE_URL=http://collision-service:8001
-```
-
-## Команды для разработки
-
-```bash
-# Запустить только основное приложение
-docker compose up -d backend collision-service
-
-# Запустить только мониторинг
-docker compose --profile monitoring up -d prometheus grafana loki
-
-# Перезапустить конкретный сервис
-docker compose restart prometheus
-
-# Посмотреть логи мониторинга
-docker compose --profile monitoring logs -f prometheus grafana
-
-# Обновить конфигурацию Prometheus без перезапуска
-docker compose exec prometheus wget --post-data="" http://localhost:9090/-/reload
-```
