@@ -91,7 +91,7 @@
 
 # StellarTracker Web Service Overview
 
-The StellarTracker web service is the central component for user interaction with the system. It is implemented using Flask and provides a convenient interface for uploading observations, viewing objects, monitoring system status, and managing users.
+The StellarTracker web service is the central component for user interaction with the system. It is built with Flask and provides a convenient interface for uploading observations, viewing objects, monitoring system status, and managing users.
 
 ![StellarTracker Web Interface](images/web.png)
 
